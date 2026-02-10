@@ -151,29 +151,76 @@
             const q = document.getElementById('wardSearch').value.toLowerCase();
             renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
         }
- function generatePDF() {
+ async function generatePDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
+
+    // 1. Create the image object
     const logo = new Image();
-    
-    // UPDATED: Now matches your lowercase filename exactly
-    logo.src = './logo.png'; 
+    logo.src = 'logo.png';
 
-    logo.onload = function() {
-        try {
-            // Using 'PNG' as the format type (this refers to the file type, not the name)
-            doc.addImage(logo, 'PNG', 240, 10, 40, 20);
-            renderPDFContent(doc);
-        } catch (e) {
-            console.error("PDF Logo Error:", e);
-            renderPDFContent(doc); 
+    // 2. Wait for the image to load using a 'Promise'
+    const logoLoaded = new Promise((resolve) => {
+        logo.onload = () => resolve(true);
+        logo.onerror = () => resolve(false);
+    });
+
+    const success = await logoLoaded;
+
+    if (success) {
+        // Position: X=240, Y=10 | Size: W=40, H=20
+        doc.addImage(logo, 'PNG', 240, 10, 40, 20);
+    } else {
+        console.warn("Logo.png could not be loaded by the browser.");
+        // We continue without the logo so the user still gets their data
+    }
+
+    // 3. Title & Header
+    doc.setFontSize(22);
+    doc.setTextColor(30, 41, 59);
+    doc.text("Remediation Project Brief", 14, 22);
+
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Department: ${currentWard}`, 14, 30);
+    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 36);
+
+    // 4. Data Gathering
+    const activeComments = wardData[currentWard] || {};
+    const tableData = [];
+
+    db.library.forEach(item => {
+        const desc = findVal(item, 'description');
+        if (activeComments[desc] && activeComments[desc].trim() !== "") {
+            tableData.push([
+                findVal(item, 'category') || "",
+                desc || "",
+                activeComments[desc]
+            ]);
         }
-    };
+    });
 
-    logo.onerror = function() {
-        alert("Logo not found. Please ensure 'logo.PNG' is in your GitHub folder and matches this capitalization exactly.");
-        renderPDFContent(doc);
-    };  
+    if (tableData.length === 0) {
+        alert("Please add notes before exporting.");
+        return;
+    }
+
+    // 5. Table Generation
+    doc.autoTable({
+        startY: 45,
+        head: [['Category', 'Description', 'Site Notes / Comments']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59] },
+        styles: { fontSize: 10, cellPadding: 4 },
+        columnStyles: { 
+            0: { cellWidth: 40 }, 
+            1: { cellWidth: 100 }, 
+            2: { cellWidth: 'auto' } 
+        }
+    });
+
+    doc.save(`Remediation_Brief_${currentWard}.pdf`);
 }
 </script>
 </body>
