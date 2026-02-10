@@ -156,17 +156,16 @@
     const doc = new jsPDF('l', 'mm', 'a4');
     const logo = new Image();
     
-    // MATCHING YOUR EXACT FILENAME: logo.PNG
-    logo.src = './logo.PNG'; 
+    // UPDATED: Now matches your lowercase filename exactly
+    logo.src = './logo.png'; 
 
     logo.onload = function() {
         try {
-            // Add Logo (Top Right)
-            // Using 'PNG' format parameter to match your file
+            // Using 'PNG' as the format type (this refers to the file type, not the name)
             doc.addImage(logo, 'PNG', 240, 10, 40, 20);
             renderPDFContent(doc);
         } catch (e) {
-            console.error("Logo error:", e);
+            console.error("PDF Logo Error:", e);
             renderPDFContent(doc); 
         }
     };
