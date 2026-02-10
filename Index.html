@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remediation Command Center</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root { --primary: #1e293b; --accent: #3b82f6; --bg: #f1f5f9; --card: #ffffff; }
         body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--primary); }
@@ -37,12 +39,11 @@
             <h1 id="deptHeading" style="margin-top:25px;"></h1>
             <div class="card" onclick="showModule('brief')"><h3>📄 Project Brief & Scope Builder</h3></div>
         </div>
-        <div id="view-content" class="view">
+     <div id="view-content" class="view">
             <button class="btn" style="background:#64748b" onclick="switchView('view-menu')">← Back</button>
             <h2 id="moduleTitle" style="margin-top:20px;"></h2>
             <div id="moduleBody" style="margin-top:20px;"></div>
         </div>
-    </div>
     <script>
       let db = { depts: [], library: [] };
         let wardData = {}; // Stores your comments
@@ -138,6 +139,52 @@
             const q = document.getElementById('wardSearch').value.toLowerCase();
             renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
         }
-    </script>
+   function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(18);
+    doc.text("Remediation Project Brief", 14, 22);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(100);
+    doc.text(`Department: ${currentWard}`, 14, 32);
+    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+    
+    // Filter out only items that HAVE comments
+    const activeComments = wardData[currentWard];
+    const tableData = [];
+    
+    // We look through the library to find the descriptions that match our comments
+    db.library.forEach(item => {
+        const desc = findVal(item, 'description');
+        if (activeComments[desc] && activeComments[desc].trim() !== "") {
+            tableData.push([
+                findVal(item, 'category'),
+                findVal(item, 'subcategory'),
+                desc,
+                activeComments[desc]
+            ]);
+        }
+    });
+
+    if (tableData.length === 0) {
+        alert("No comments found! Add some site notes before exporting.");
+        return;
+    }
+
+    // Generate Table
+    doc.autoTable({
+        startY: 45,
+        head: [['Category', 'Subcategory', 'Description', 'Site Notes / Comments']],
+        body: tableData,
+        theme: 'striped',
+        headStyles: { fillColor: [30, 41, 59] } // Matches your Slate Dark theme
+    });
+
+    doc.save(`Remediation_Brief_${currentWard}.pdf`);
+}
+</script>
 </body>
 </html>
