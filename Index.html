@@ -172,7 +172,7 @@
         // This prevents the "stretching" look
         const imgProps = doc.getImageProperties(logo);
         const ratio = imgProps.height / imgProps.width;
-        const logoWidth = 35; 
+        const logoWidth = 25; 
         const logoHeight = logoWidth * ratio;
         
         doc.addImage(logo, 'PNG', 245, 10, logoWidth, logoHeight);
