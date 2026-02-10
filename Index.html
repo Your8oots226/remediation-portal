@@ -168,11 +168,14 @@
     const success = await logoLoaded;
 
     if (success) {
-        // Position: X=240, Y=10 | Size: W=40, H=20
-        doc.addImage(logo, 'PNG', 240, 10, 40, 20);
-    } else {
-        console.warn("Logo.png could not be loaded by the browser.");
-        // We continue without the logo so the user still gets their data
+   // We set width to 30mm and use 0 to tell it "keep the natural height"
+        // This prevents the "stretching" look
+        const imgProps = doc.getImageProperties(logo);
+        const ratio = imgProps.height / imgProps.width;
+        const logoWidth = 35; 
+        const logoHeight = logoWidth * ratio;
+        
+        doc.addImage(logo, 'PNG', 245, 10, logoWidth, logoHeight);
     }
 
     // 3. Title & Header
@@ -185,7 +188,7 @@
     doc.text(`Department: ${currentWard}`, 14, 30);
     doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 36);
 
-    // 4. Data Gathering
+ // 4. Data Gathering (Description now comes BEFORE Category)
     const activeComments = wardData[currentWard] || {};
     const tableData = [];
 
@@ -193,9 +196,9 @@
         const desc = findVal(item, 'description');
         if (activeComments[desc] && activeComments[desc].trim() !== "") {
             tableData.push([
-                findVal(item, 'category') || "",
-                desc || "",
-                activeComments[desc]
+                desc || "",                             // Column 0: Description
+                findVal(item, 'category') || "",       // Column 1: Category
+                activeComments[desc]                    // Column 2: Site Notes
             ]);
         }
     });
@@ -205,18 +208,18 @@
         return;
     }
 
-    // 5. Table Generation
+ // 5. Table Generation (New Column Order & Widths)
     doc.autoTable({
         startY: 45,
-        head: [['Category', 'Description', 'Site Notes / Comments']],
+        head: [['Description', 'Category', 'Site Notes / Comments']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [30, 41, 59] },
         styles: { fontSize: 10, cellPadding: 4 },
         columnStyles: { 
-            0: { cellWidth: 40 }, 
-            1: { cellWidth: 100 }, 
-            2: { cellWidth: 'auto' } 
+            0: { cellWidth: 100 }, // Description gets significant space
+            1: { cellWidth: 40 },  // Category is narrower
+            2: { cellWidth: 'auto' } // Site Notes takes the remaining landscape width
         }
     });
 
