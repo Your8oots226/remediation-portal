@@ -44,8 +44,9 @@
         </div>
     </div>
     <script>
-       let db = { depts: [], library: [] };
-        let wardData = {}; // This is the "Brain" that stores your comments
+      let db = { depts: [], library: [] };
+        let wardData = {}; // Stores your comments
+        let currentWard = "";
 
         function findVal(row, target) {
             const keys = Object.keys(row);
@@ -77,18 +78,15 @@
             document.getElementById('deptList').innerHTML = html;
         }
 
-        let currentWard = "";
-
         function openDept(name) {
             currentWard = name;
             document.getElementById('deptHeading').innerText = name;
-            if (!wardData[name]) wardData[name] = {}; // Create a blank file for this ward if it doesn't exist
+            if (!wardData[name]) wardData[name] = {}; 
             switchView('view-menu');
         }
 
         function saveComment(itemDesc, val) {
             wardData[currentWard][itemDesc] = val;
-            console.log("Saved for " + currentWard + ": " + itemDesc + " = " + val);
         }
 
         function showModule(type) {
@@ -96,14 +94,15 @@
             body.innerHTML = "";
             if (type === 'brief') {
                 document.getElementById('moduleTitle').innerText = "Scope Builder";
+                
+                // FIXED: Changed findValue to findVal to match the function above
                 const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
                 
                 cats.forEach(cat => {
-                    const items = db.library.filter(i => findValue(i, 'category') === cat);
+                    const items = db.library.filter(i => findVal(i, 'category') === cat);
                     let rows = items.map(i => {
-                        const sub = findValue(i, 'subcategory') || "";
-                        const desc = findValue(i, 'description') || "";
-                        // Retrieve the saved comment if it exists
+                        const sub = findVal(i, 'subcategory') || "";
+                        const desc = findVal(i, 'description') || "";
                         const existingComment = wardData[currentWard][desc] || "";
                         
                         return `
