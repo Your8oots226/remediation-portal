@@ -151,22 +151,28 @@
             const q = document.getElementById('wardSearch').value.toLowerCase();
             renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
         }
-      function generatePDF() {
-    try {
-        const { jsPDF } = window.jspdf;
-        // Orientation: 'l' (Landscape), Unit: 'mm', Format: 'a4'
-        const doc = new jsPDF('l', 'mm', 'a4');
+    function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+    const logo = new Image();
+    logo.src = 'logo.png'; // This must be in your GitHub folder
 
-        // Title & Header
-        doc.setFontSize(18);
-        doc.text("Remediation Project Brief", 14, 20);
+    logo.onload = function() {
+        // 1. Add Logo (Top Right)
+        // Adjust the 240, 10, 40, 20 numbers to move/resize the logo
+        doc.addImage(logo, 'PNG', 240, 10, 40, 20);
+
+        // 2. Title & Header
+        doc.setFontSize(22);
+        doc.setTextColor(30, 41, 59); // Slate Dark
+        doc.text("Remediation Project Brief", 14, 22);
 
         doc.setFontSize(11);
         doc.setTextColor(100);
-        doc.text(`Department: ${currentWard}`, 14, 28);
-        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 34);
+        doc.text(`Department: ${currentWard}`, 14, 30);
+        doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 36);
 
-        // Gather Data from your "Memory"
+        // 3. Data Gathering
         const activeComments = wardData[currentWard] || {};
         const tableData = [];
 
@@ -183,28 +189,29 @@
         });
 
         if (tableData.length === 0) {
-            alert("Please add at least one site note before exporting.");
+            alert("Please add notes before exporting.");
             return;
         }
 
-        // Generate Table
+        // 4. Table Generation
         doc.autoTable({
-            startY: 40,
+            startY: 45,
             head: [['Category', 'Subcategory', 'Description', 'Site Notes / Comments']],
             body: tableData,
             theme: 'striped',
             headStyles: { fillColor: [30, 41, 59] },
-            styles: { fontSize: 9, cellPadding: 3, overflow: 'linebreak' },
-            columnStyles: {
-                3: { cellWidth: 'auto' } // Let the notes column expand
-            }
+            styles: { fontSize: 9, cellPadding: 4 },
+            columnStyles: { 3: { cellWidth: 100 } } // Gives notes more room
         });
 
         doc.save(`Remediation_Brief_${currentWard}.pdf`);
-    } catch (error) {
-        console.error("PDF Generation Error:", error);
-        alert("There was an error generating the PDF. Check the Console for details.");
-    }
+    };
+
+    logo.onerror = function() {
+        alert("Logo not found. Make sure 'logo.png' is in your project folder.");
+        // Runs PDF generation without logo if it fails to load
+        generatePDF_NoLogo(); 
+    };
 }
 </script>
 </body>
