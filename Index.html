@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NHS PMO - Governance Portal v2.2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --nhs-blue: #005eb8; --nhs-light: #e8f1f8; --success: #22c55e; --risk: #d11210; --change: #7c3aed; --bg: #f8fafc; --lock: #64748b; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1e293b; }
+        .navbar { background: var(--nhs-blue); color: white; padding: 15px 20px; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 12px; border-radius: 6px; margin-right: 15px; cursor: pointer; display: none; }
+        .container { padding: 20px; max-width: 900px; margin: auto; }
+        .version-card { background: #1a202c; color: #4ade80; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-family: monospace; font-size: 11px; line-height: 1.4; border-left: 4px solid var(--success); }
+        .menu-item { background: white; padding: 18px; border-radius: 12px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); cursor: pointer; border-left: 6px solid var(--nhs-blue); }
+        .library-section { background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+        .category-label { font-size: 0.75rem; font-weight: bold; color: var(--nhs-blue); text-transform: uppercase; margin-bottom: 10px; display: block; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .library-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .lib-chip { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 10px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; border-left: 4px solid var(--nhs-blue); }
+        .view { display: none; }
+        .view.active { display: block; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <button id="backBtn" class="back-btn" onclick="goBack()">← Back</button>
+        <div id="navTitle">Remediation Portal</div>
+    </div>
+    <div class="container">
+        <div id="view-home" class="view active">
+            <div id="versionInfo" class="version-card">SYSTEM READY: Awaiting Master Project Registry...</div>
+            <button onclick="document.getElementById('fileIn').click()" style="width:100%; padding:15px; border-radius:8px; border:2px dashed var(--nhs-blue); background:white; color:var(--nhs-blue); font-weight:bold; cursor:pointer;">Upload Updated Excel File</button>
+            <input type="file" id="fileIn" style="display:none;" onchange="handleFile(event)">
+            <div id="deptList" style="margin-top:20px;"></div>
+        </div>
+        <div id="view-menu" class="view">
+            <h1 id="deptHeading" style="margin-bottom:5px;"></h1>
+            <div class="menu-item" onclick="showModule('brief')" style="border-left-color:var(--lock)"><strong>📄 Project Brief & Scope Builder</strong></div>
+            <div class="menu-item" onclick="showModule('tasks')" style="border-left-color:var(--nhs-blue)"><strong>📋 Trust Task Registry</strong></div>
+        </div>
+        <div id="view-content" class="view">
+            <h2 id="moduleTitle"></h2>
+            <div id="moduleBody"></div>
+        </div>
+    </div>
+    <script>
+        let db = { depts: [], library: [], fileMeta: {} };
+        let activeDept = null;
+
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const wb = XLSX.read(data, {type: 'array'});
+                    
+                    const libName = wb.SheetNames.find(n => n.toLowerCase().includes('library') || n.toLowerCase().includes('brief'));
+                    const baseName = wb.SheetNames.find(n => n.toLowerCase().includes('baseline') || n.toLowerCase().includes('dept'));
+
+                    if (!libName || !baseName) {
+                        alert("Error: Tabs not found. Ensure you have 'Baseline' and 'Briefing Library'.");
+                        return;
+                    }
+
+                    db.library = XLSX.utils.sheet_to_json(wb.Sheets[libName]);
+                    db.depts = XLSX.utils.sheet_to_json(wb.Sheets[baseName]);
+                    
+                    db.fileMeta = { name: file.name, time: new Date().toLocaleString() };
+                    updateVersionCard();
+                    renderHome();
+                } catch (err) { alert("File Read Error: " + err.message); }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function updateVersionCard() {
+            document.getElementById('versionInfo').innerHTML = `LIVE DATA: ${db.fileMeta.name}<br>UPLOADED: ${db.fileMeta.time}<br>RECORDS: ${db.library.length} Briefing Items`;
+        }
+
+        function getVal(row, names) {
+            const keys = Object.keys(row);
+            for (let n of names) {
+                let match = keys.find(k => k.toLowerCase().replace(/\s/g, '').includes(n.toLowerCase().replace(/\s/g, '')));
+                if (match) return row[match];
+            }
+            return "Unknown Ward";
+        }
+
+        function renderHome() {
+            let html = "";
+            db.depts.forEach((d, i) => {
+                const name = getVal(d, ['department', 'ward', 'name', 'area']);
+                const id = String(getVal(d, ['id', 'dept']) || i).toLowerCase();
+                html += `<div class="menu-item" onclick="openDept('${id}', '${name}')"><strong>${name}</strong><span>${localStorage.getItem('lock_'+id) ? '🔒' : '✏️'}</span></div>`;
+            });
+            document.getElementById('deptList').innerHTML = html;
+        }
+
+        function openDept(id, name) {
+            activeDept = { id, name };
+            document.getElementById('deptHeading').innerText = name;
+            switchView('view-menu');
+        }
+
+        function showModule(type) {
+            const body = document.getElementById('moduleBody');
+            body.innerHTML = "";
+            if (type === 'brief') {
+                document.getElementById('moduleTitle').innerText = "Scope Builder";
+                const cats = [...new Set(db.library.map(i => getVal(i, ['category'])))];
+                cats.forEach(cat => {
+                    const items = db.library.filter(i => getVal(i, ['category']) === cat);
+                    let grid = items.map(i => `<div class="lib-chip" onclick="addItem('${getVal(i, ['description'])}')"><strong>${getVal(i, ['subcategory'])}</strong><br><small>${getVal(i, ['description'])}</small></div>`).join('');
+                    body.innerHTML += `<div class="library-section"><span class="category-label">${cat}</span><div class="library-grid">${grid}</div></div>`;
+                });
+            }
+            switchView('view-content');
+        }
+
+        function addItem(desc) {
+            const scope = JSON.parse(localStorage.getItem('scope_' + activeDept.id) || "[]");
+            if (!scope.includes(desc)) {
+                scope.push(desc);
+                localStorage.setItem('scope_' + activeDept.id, JSON.stringify(scope));
+                alert("Scope Added to " + activeDept.name);
+            }
+        }
+
+        function switchView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.getElementById('backBtn').style.display = id === 'view-home' ? 'none' : 'block';
+        }
+
+        function goBack() {
+            if (document.getElementById('view-content').classList.contains('active')) switchView('view-menu');
+            else switchView('view-home');
+        }
+    </script>
+</body>
+</html>
