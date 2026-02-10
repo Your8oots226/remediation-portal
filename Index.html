@@ -208,19 +208,25 @@
         return;
     }
 
- // 5. Table Generation (New Column Order & Widths)
+ // 5. Table Generation (Optimized for full-page width)
     doc.autoTable({
         startY: 45,
         head: [['Description', 'Category', 'Site Notes / Comments']],
         body: tableData,
         theme: 'striped',
         headStyles: { fillColor: [30, 41, 59] },
-        styles: { fontSize: 10, cellPadding: 4 },
+        styles: { 
+            fontSize: 10, 
+            cellPadding: 5, 
+            overflow: 'linebreak',
+            valign: 'top' 
+        },
         columnStyles: { 
-            0: { cellWidth: 100 }, // Description gets significant space
-            1: { cellWidth: 40 },  // Category is narrower
-            2: { cellWidth: 'auto' } // Site Notes takes the remaining landscape width
-        }
+            0: { cellWidth: 90 },  // Description: Plenty of room
+            1: { cellWidth: 35 },  // Category: Keeps it compact
+            2: { cellWidth: 'auto' } // Site Notes: Stretches to fill the rest of the 297mm
+        },
+        margin: { left: 14, right: 14 } // Ensures it uses the full width of the paper
     });
 
     doc.save(`Remediation_Brief_${currentWard}.pdf`);
