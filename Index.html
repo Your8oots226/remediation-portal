@@ -1,73 +1,144 @@
-<style>
-    /* Professional Row Layout */
-    .lib-row { 
-        display: grid; 
-        grid-template-columns: 1fr 2fr 1.5fr; 
-        gap: 15px; 
-        background: white; 
-        padding: 15px; 
-        border-bottom: 1px solid #e2e8f0;
-        align-items: center;
-    }
-    .lib-row:hover { background: #f8fafc; }
-    
-    .comment-input {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #cbd5e1;
-        border-radius: 4px;
-        font-size: 0.85rem;
-    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remediation Command Center</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --primary: #1e293b; --accent: #3b82f6; --bg: #f1f5f9; --card: #ffffff; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--primary); }
+        .header { background: var(--primary); color: white; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { padding: 30px; max-width: 1200px; margin: auto; }
+        
+        /* Row-Based Briefing Layout */
+        .lib-row { display: grid; grid-template-columns: 1fr 2fr 1.5fr; gap: 15px; background: white; padding: 15px; border-bottom: 1px solid #e2e8f0; align-items: center; }
+        .row-header { font-weight: 800; font-size: 0.7rem; color: #64748b; text-transform: uppercase; padding: 10px 15px; background: #f1f5f9; display: grid; grid-template-columns: 1fr 2fr 1.5fr; gap: 15px; }
+        .comment-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; }
 
-    .row-header {
-        font-weight: 800;
-        font-size: 0.7rem;
-        color: #64748b;
-        text-transform: uppercase;
-        padding: 10px 15px;
-        background: #f1f5f9;
-        display: grid;
-        grid-template-columns: 1fr 2fr 1.5fr;
-        gap: 15px;
-    }
-</style>
+        .btn { background: var(--accent); color: white; padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+        .search-input { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin: 20px 0; box-sizing: border-box; }
+        .dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border-top: 5px solid var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .view { display: none; } .view.active { display: block; }
+    </style>
+</head>
+<body>
+    <header class="header"><h2>Remediation Command Center</h2></header>
+    <div class="container">
+        <div id="view-home" class="view active">
+            <button class="btn" onclick="document.getElementById('fileIn').click()">↑ Upload Master Registry</button>
+            <input type="file" id="fileIn" style="display:none;" onchange="handleFile(event)">
+            <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..." onkeyup="filterWards()">
+            <div id="deptList" class="dept-grid"></div>
+        </div>
+        <div id="view-menu" class="view">
+            <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back</button>
+            <h1 id="deptHeading" style="margin-top:25px;"></h1>
+            <div class="card" onclick="showModule('brief')"><h3>📄 Project Brief & Scope Builder</h3></div>
+        </div>
+        <div id="view-content" class="view">
+            <button class="btn" style="background:#64748b" onclick="switchView('view-menu')">← Back</button>
+            <h2 id="moduleTitle" style="margin-top:20px;"></h2>
+            <div id="moduleBody" style="margin-top:20px;"></div>
+        </div>
+    </div>
+    <script>
+       let db = { depts: [], library: [] };
+        let wardData = {}; // This is the "Brain" that stores your comments
 
-<script>
-function showModule(type) {
-    const body = document.getElementById('moduleBody');
-    body.innerHTML = "";
-    if (type === 'brief') {
-        document.getElementById('moduleTitle').innerText = "Scope Builder";
-        const cats = [...new Set(db.library.map(i => findValue(i, 'category')))].filter(c => c);
+        function findVal(row, target) {
+            const keys = Object.keys(row);
+            const match = keys.find(k => k.toLowerCase().replace(/\s/g, '').includes(target.toLowerCase()));
+            return match ? row[match] : null;
+        }
 
-        cats.forEach(cat => {
-            const items = db.library.filter(i => findValue(i, 'category') === cat);
-            
-            let rows = items.map(i => {
-                const sub = findValue(i, 'subcategory') || "General";
-                const desc = findValue(i, 'description') || "";
-                return `
-                    <div class="lib-row">
-                        <div><strong>${sub}</strong></div>
-                        <div style="font-size:0.9rem;">${desc}</div>
-                        <div>
-                            <input type="text" class="comment-input" placeholder="Add site notes...">
-                        </div>
-                    </div>`;
-            }).join('');
+        function handleFile(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const libName = wb.SheetNames.find(n => n.toLowerCase().includes('library'));
+                const baseName = wb.SheetNames.find(n => n.toLowerCase().includes('baseline'));
+                db.library = XLSX.utils.sheet_to_json(wb.Sheets[libName]);
+                db.depts = XLSX.utils.sheet_to_json(wb.Sheets[baseName]);
+                renderHome();
+            };
+            reader.readAsArrayBuffer(file);
+        }
 
-            body.innerHTML += `
-                <div class="library-section" style="padding:0; overflow:hidden;">
-                    <div style="padding:15px; background:var(--primary); color:white; font-weight:bold;">${cat}</div>
-                    <div class="row-header">
-                        <div>Subcategory</div>
-                        <div>Description</div>
-                        <div>Comments / Quantities</div>
-                    </div>
-                    ${rows}
-                </div>`;
-        });
-    }
-    switchView('view-content');
-}
-</script>
+        function renderHome(data = db.depts) {
+            let html = "";
+            data.forEach((d) => {
+                const name = findVal(d, 'department') || findVal(d, 'ward') || "Unknown Dept";
+                html += `<div class="card" onclick="openDept('${name}')"><strong>${name}</strong></div>`;
+            });
+            document.getElementById('deptList').innerHTML = html;
+        }
+
+        let currentWard = "";
+
+        function openDept(name) {
+            currentWard = name;
+            document.getElementById('deptHeading').innerText = name;
+            if (!wardData[name]) wardData[name] = {}; // Create a blank file for this ward if it doesn't exist
+            switchView('view-menu');
+        }
+
+        function saveComment(itemDesc, val) {
+            wardData[currentWard][itemDesc] = val;
+            console.log("Saved for " + currentWard + ": " + itemDesc + " = " + val);
+        }
+
+        function showModule(type) {
+            const body = document.getElementById('moduleBody');
+            body.innerHTML = "";
+            if (type === 'brief') {
+                document.getElementById('moduleTitle').innerText = "Scope Builder";
+                const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
+                
+                cats.forEach(cat => {
+                    const items = db.library.filter(i => findValue(i, 'category') === cat);
+                    let rows = items.map(i => {
+                        const sub = findValue(i, 'subcategory') || "";
+                        const desc = findValue(i, 'description') || "";
+                        // Retrieve the saved comment if it exists
+                        const existingComment = wardData[currentWard][desc] || "";
+                        
+                        return `
+                            <div class="lib-row">
+                                <div><strong>${sub}</strong></div>
+                                <div style="font-size:0.9rem;">${desc}</div>
+                                <div>
+                                    <input type="text" class="comment-input" 
+                                           value="${existingComment}" 
+                                           placeholder="Add site notes..." 
+                                           oninput="saveComment('${desc}', this.value)">
+                                </div>
+                            </div>`;
+                    }).join('');
+                    
+                    body.innerHTML += `
+                        <div style="margin-bottom:30px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                            <div style="padding:15px; background:var(--primary); color:white; font-weight:bold;">${cat}</div>
+                            <div class="row-header"><div>Subcategory</div><div>Description</div><div>Comments</div></div>
+                            ${rows}
+                        </div>`;
+                });
+            }
+            switchView('view-content');
+        }
+
+        function switchView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        function filterWards() {
+            const q = document.getElementById('wardSearch').value.toLowerCase();
+            renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
+        }
+    </script>
+</body>
+</html>
