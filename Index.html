@@ -96,11 +96,32 @@
             body.innerHTML = "";
             if (type === 'brief') {
                 document.getElementById('moduleTitle').innerText = "Scope Builder";
+                
+                // Get unique categories (Clinical, Digital, etc.)
                 const cats = [...new Set(db.library.map(i => findValue(i, 'category')))].filter(c => c);
+                
                 cats.forEach(cat => {
                     const items = db.library.filter(i => findValue(i, 'category') === cat);
-                    let grid = items.map(i => `<div class="lib-chip"><strong>${findValue(i, 'subcategory')}</strong><small>${findValue(i, 'description')}</small></div>`).join('');
-                    body.innerHTML += `<div class="library-section"><span class="category-label">${cat}</span><div class="lib-grid">${grid}</div></div>`;
+                    
+                    let grid = items.map(i => {
+                        // Check for Subcategory, and if null/empty, use an empty string
+                        const subRaw = findValue(i, 'subcategory');
+                        const sub = (subRaw && subRaw !== 'null') ? `<strong>${subRaw}</strong>` : "";
+                        
+                        const desc = findValue(i, 'description') || "No details provided";
+                        
+                        return `
+                            <div class="lib-chip" onclick="alert('Item Added')">
+                                ${sub}
+                                <small>${desc}</small>
+                            </div>`;
+                    }).join('');
+                    
+                    body.innerHTML += `
+                        <div class="library-section">
+                            <span class="category-label">${cat}</span>
+                            <div class="lib-grid">${grid}</div>
+                        </div>`;
                 });
             }
             switchView('view-content');
