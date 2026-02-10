@@ -39,7 +39,6 @@
             <h1 id="deptHeading" style="margin-top:25px;"></h1>
             <div class="card" onclick="showModule('brief')"><h3>📄 Project Brief & Scope Builder</h3></div>
         </div>
-    ```html
         <div id="view-content" class="view">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom: 20px;">
                 <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back</button>
@@ -111,17 +110,17 @@
                         const desc = findVal(i, 'description') || "";
                         const existingComment = wardData[currentWard][desc] || "";
                         
-                        return `
-                            <div class="lib-row">
-                                <div><strong>${sub}</strong></div>
-                                <div style="font-size:0.9rem;">${desc}</div>
-                                <div>
-                                    <input type="text" class="comment-input" 
-                                           value="${existingComment}" 
-                                           placeholder="Add site notes..." 
-                                           oninput="saveComment('${desc}', this.value)">
-                                </div>
-                            </div>`;
+                    return `
+    <div class="lib-row" style="align-items: flex-start;">
+        <div><strong>${sub}</strong></div>
+        <div style="font-size:0.9rem; padding-right:10px;">${desc}</div>
+        <div>
+            <textarea class="comment-input" 
+                      style="height: 60px; resize: vertical; display: block;"
+                      placeholder="Add site notes..." 
+                      oninput="saveComment('${desc}', this.value)">${existingComment}</textarea>
+        </div>
+    </div>`;    
                     }).join('');
                     
                     body.innerHTML += `
