@@ -152,23 +152,27 @@
             renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
         }
    function generatePDF() {
+    function generatePDF() {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    // Set orientation to 'l' for Landscape
+    const doc = new jsPDF({
+        orientation: 'l',
+        unit: 'mm',
+        format: 'a4'
+    });
     
-    // Header
+    // Header - Adjusted for wider page
     doc.setFontSize(18);
-    doc.text("Remediation Project Brief", 14, 22);
+    doc.text("Remediation Project Brief", 14, 20);
     
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setTextColor(100);
-    doc.text(`Department: ${currentWard}`, 14, 32);
-    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 38);
+    doc.text(`Department: ${currentWard}`, 14, 28);
+    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 34);
     
-    // Filter out only items that HAVE comments
     const activeComments = wardData[currentWard];
     const tableData = [];
     
-    // We look through the library to find the descriptions that match our comments
     db.library.forEach(item => {
         const desc = findVal(item, 'description');
         if (activeComments[desc] && activeComments[desc].trim() !== "") {
@@ -186,16 +190,25 @@
         return;
     }
 
-    // Generate Table
+    // Generate Table with specific column widths for Landscape
     doc.autoTable({
-        startY: 45,
+        startY: 42,
         head: [['Category', 'Subcategory', 'Description', 'Site Notes / Comments']],
         body: tableData,
         theme: 'striped',
-        headStyles: { fillColor: [30, 41, 59] } // Matches your Slate Dark theme
+        headStyles: { fillColor: [30, 41, 59] },
+        // Adjusting column styles so "Comments" gets 40% of the width
+        columnStyles: {
+            0: { cellWidth: 35 }, // Category
+            1: { cellWidth: 45 }, // Subcategory
+            2: { cellWidth: 80 }, // Description
+            3: { cellWidth: 'auto' } // Comments (takes the rest)
+        },
+        styles: { fontSize: 9, cellPadding: 3 }
     });
 
     doc.save(`Remediation_Brief_${currentWard}.pdf`);
+}
 }
 </script>
 </body>
