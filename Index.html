@@ -195,27 +195,22 @@
             document.getElementById(id).classList.add('active');
         }
 
-        function renderHome() {
-        const list = document.getElementById('deptList');
-        list.innerHTML = db.depts.map(d => {
-            // Added 'departmentalname' to the search list
-            const name = findVal(d, 'departmentalname') || 
-                         findVal(d, 'ward') || 
-                         findVal(d, 'department') || 
-                         "Unnamed Ward";
-            
-            return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
-        }).join('');
-    }
+        function selectWard(name) {
+            currentWard = name;
+            if (!wardData[currentWard]) wardData[currentWard] = {};
+            document.getElementById('deptHeading').innerText = currentWard;
+            switchView('view-menu');
+        }
 
         // 4. HOME & SEARCH
         function renderHome() {
         const list = document.getElementById('deptList');
+        // We look for any column that sounds like 'ward' or 'dept'
         list.innerHTML = db.depts.map(d => {
-            // Added 'departmentalname' to the search list
-            const name = findVal(d, 'departmentalname') || 
-                         findVal(d, 'ward') || 
+            const name = findVal(d, 'ward') || 
                          findVal(d, 'department') || 
+                         findVal(d, 'dept') || 
+                         findVal(d, 'name') || 
                          "Unnamed Ward";
             
             return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
