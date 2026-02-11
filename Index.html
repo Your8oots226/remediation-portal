@@ -189,18 +189,6 @@
             reader.readAsArrayBuffer(file);
         }
 
-       function selectWard(name) {
-        currentWard = name;
-        // This ensures the ward has a place in memory for your meeting notes
-        if (!wardData[currentWard]) wardData[currentWard] = {};
-        
-        // This updates the heading on the next screen to the Ward name
-        const heading = document.getElementById('deptHeading');
-        if (heading) heading.innerText = currentWard;
-        
-        // This triggers the switch to the 3-button menu screen
-        switchView('view-menu');
-    } 
         // 3. NAVIGATION
         function switchView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -243,11 +231,10 @@
 
         // 5. DATA HELPERS
         function findVal(obj, key) {
-        if (!obj) return "";
-        // This helper makes sure we find headers even with spaces or capital letters
-        const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
-        return k ? obj[k] : "";
-    }
+            if (!obj) return "";
+            const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
+            return k ? obj[k] : "";
+        }
 
         function saveComment(id, val) {
             wardData[currentWard][id] = val;
@@ -268,16 +255,14 @@
                         const desc = findVal(i, 'description') || "";
                         const saved = wardData[currentWard][desc] || "";
                         return `
-                    <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
-                        <div style="font-size:0.9rem;">${desc}</div>
-                        <textarea class="comment-input" oninput="saveComment('${desc}', this.value)">${saved}</textarea>
-                    </div>`;
-            }).join(''); // This closes the .map() from line 267
-            
-            body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
-        }); // This closes the cats.forEach from line 265
-    } // This closes the if (type === 'brief') from line 262
-    else {
+                        <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
+                            <div style="font-size:0.9rem;">${desc}</div>
+                            <textarea class="comment-input" oninput="saveComment('${desc}', this.value)">${saved}</textarea>
+                        </div>`;
+                    }).join('');
+                    body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
+                });
+            } else {
                 const isEnabler = type === 'enablers';
                 document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
                 const tasks = (isEnabler ? db.enablers : db.moves).filter(t => findVal(t, 'ward') === currentWard);
@@ -297,8 +282,8 @@
                 }).join('');
                 body.innerHTML = `<div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;"><div>ID</div><div>Task</div><div>Who</div><div>Notes</div></div>${rows}`;
             }
-switchView('view-content');
-    } // Closes showModule
+            switchView('view-content');
+    }
 </script>
 </body>
 </html>
