@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary: #1e293b; --accent: #3b82f6; --bg: #f1f5f9; --card: #ffffff; }
         body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--primary); }
@@ -32,6 +33,7 @@
         font-family: inherit;
         line-height: 1.4;
     </style>
+    
 </head>
 <body>
     <header class="header"><h2>Remediation Command Center</h2></header>
@@ -140,33 +142,42 @@
 
     // 4. THE MODULE BUILDER (Scope, Enablers, Moves)
     function showModule(type) {
-        currentType = type; // Remember where we are for the modal
+        currentType = type;
         const body = document.getElementById('moduleBody');
         body.innerHTML = "";
         
         const backBtn = `<button class="btn" style="background:#64748b; margin-bottom:20px;" onclick="switchView('view-menu')">← Back to Menu</button>`;
 
-        // --- A. SCOPE BUILDER (Improved Header Search) ---
+        // --- A. SCOPE BUILDER (Improved Column Hunter) ---
         if (type === 'brief') {
             document.getElementById('moduleTitle').innerText = "Scope Builder";
+            // PDF Button
             body.innerHTML = backBtn + `<button class="btn" style="background:#ef4444; margin-left:10px;" onclick="downloadPDF()">Download PDF</button>`;
             
-            // Search for ANY column that looks like a category
+            // 1. Find Category
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
             const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
 
             if (cats.length === 0) {
-                 body.innerHTML += `<div class="card" style="color:red; border:1px solid red;">
-                    <strong>Setup Error:</strong> Could not find a 'Category' column in your Excel 'Library' tab.<br>
-                    Please ensure one column header is named 'Category', 'Group', or 'Element'.
-                 </div>`;
+                 body.innerHTML += `<div class="card" style="color:red; border:1px solid red;">Error: Could not find 'Category' column.</div>`;
             }
 
             cats.forEach(cat => {
                 const items = db.library.filter(i => getCat(i) === cat);
                 let rows = items.map(i => {
-                    const desc = findVal(i, 'description') || findVal(i, 'item') || "Item";
+                    // 2. AGGRESSIVE DESCRIPTION SEARCH
+                    // We look for: description, item, task, activity, component, name, detail, specification
+                    const desc = findVal(i, 'description') || 
+                                 findVal(i, 'item') || 
+                                 findVal(i, 'task') || 
+                                 findVal(i, 'activity') || 
+                                 findVal(i, 'component') || 
+                                 findVal(i, 'name') ||
+                                 findVal(i, 'detail') ||
+                                 Object.values(i)[0]; // Fallback: Just take the very first column!
+
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
+                    
                     return `
                         <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
                             <div style="font-size:0.9rem;">${desc}</div>
@@ -177,7 +188,7 @@
             });
         } 
         
-        // --- B. TASK TRACKERS (Traffic Lights & Dropdowns) ---
+        // --- B. TASK TRACKERS ---
         else {
             const isEnabler = type === 'enablers';
             document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
@@ -200,19 +211,15 @@
 
                 // Traffic Light Logic
                 let rowColor = "";
-                if (due) {
+                if (due && status !== 'Complete') {
                     const today = new Date();
                     const dueDate = new Date(due);
                     const diffTime = dueDate - today;
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                    
-                    if (status !== 'Complete') {
-                        if (diffDays < 0) rowColor = "background-color: #fca5a5;"; // Red (Late)
-                        else if (diffDays <= 7) rowColor = "background-color: #fde047;"; // Amber (Due soon)
-                    }
+                    if (diffDays < 0) rowColor = "background-color: #fca5a5;"; // Red
+                    else if (diffDays <= 7) rowColor = "background-color: #fde047;"; // Amber
                 }
 
-                // Dropdown for Status
                 const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
                     .map(opt => `<option value="${opt}" ${status === opt ? 'selected' : ''}>${opt}</option>`).join('');
 
@@ -297,8 +304,15 @@
     }
     
     function downloadPDF() {
+        // We select the 'moduleBody' div to print just the content
         const element = document.getElementById('moduleBody');
-        const opt = { margin: 0.3, filename: `${currentWard}_Report.pdf`, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } };
+        const opt = { 
+            margin: 0.3, 
+            filename: `${currentWard}_Report.pdf`, 
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } 
+        };
         html2pdf().set(opt).from(element).save();
     }
 </script>
