@@ -37,11 +37,13 @@
     <header class="header"><h2>Remediation Command Center</h2></header>
     <div class="container">
         <div id="view-home" class="view active">
-            <button class="btn" onclick="document.getElementById('fileIn').click()">↑ Upload Master Registry</button>
-            <input type="file" id="fileIn" style="display:none;" onchange="handleFile(event)">
-            <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..." onkeyup="filterWards()">
-            <div id="deptList" class="dept-grid"></div>
-        </div>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">↑ Upload Master Registry</button>
+    
+    <input type="file" id="fileInput" style="display:none;" onchange="handleFile(event)">
+    
+    <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..." onkeyup="filterWards()">
+    <div id="deptList" class="dept-grid"></div>
+</div>
         <div id="view-menu" class="view">
             <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back to Wards</button>
             <h1 id="deptHeading" style="margin-top:25px;"></h1>
@@ -68,29 +70,38 @@
         }
 
         function handleFile(e) {
-            const file = e.target.files[0];
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const wb = XLSX.read(data, {type: 'array'});
-                
-                // Find all the necessary sheets
-                const libName = wb.SheetNames.find(n => n.toLowerCase().includes('library'));
-                const baseName = wb.SheetNames.find(n => n.toLowerCase().includes('baseline'));
-                const enablersName = wb.SheetNames.find(n => n.toLowerCase().includes('enablers'));
-                const movesName = wb.SheetNames.find(n => n.toLowerCase().includes('moves'));
-                
-                // Load data into our database object
-                db.library = XLSX.utils.sheet_to_json(wb.Sheets[libName]);
-                db.depts = XLSX.utils.sheet_to_json(wb.Sheets[baseName]);
-                db.enablers = XLSX.utils.sheet_to_json(wb.Sheets[enablersName]) || [];
-                db.moves = XLSX.utils.sheet_to_json(wb.Sheets[movesName]) || [];
-                
-                renderHome();
-                alert("Master Registry Loaded: Enablers and Moves found!");
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const wb = XLSX.read(data, {type: 'array'});
+            
+            // Helper to find sheets regardless of capitalization
+            const getSheet = (name) => {
+                const actualName = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
+                return actualName ? XLSX.utils.sheet_to_json(wb.Sheets[actualName]) : null;
             };
-            reader.readAsArrayBuffer(file);
+
+            db.library = getSheet('library');
+            db.depts = getSheet('baseline');
+            db.enablers = getSheet('enablers') || [];
+            db.moves = getSheet('moves') || [];
+
+            if (!db.library || !db.depts) {
+                alert("Error: Could not find 'Library' or 'Baseline' tabs in Excel.");
+                return;
+            }
+
+            renderHome();
+            console.log("Data loaded successfully:", db);
+        } catch (err) {
+            console.error("File processing error:", err);
+            alert("There was an error reading the file. Check the console for details.");
         }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
         function renderHome(data = db.depts) {
             let html = "";
