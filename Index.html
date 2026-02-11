@@ -234,23 +234,31 @@
 
     // 6. HELPERS (Add Task, Save, Find)
     function addNewTask(type) {
-        const desc = prompt("Enter Task Description:");
-        if (!desc) return;
-        
-        const newTask = {
-            "taskid": "NEW-" + Math.floor(Math.random() * 999),
-            "taskdescription": desc,
-            "ward": currentWard,
-            "whoresponsible": "Team",
-            "datedue": "TBC",
-            "currentstatus": "Added Live"
-        };
-        
-        if (type === 'enablers') db.enablers.push(newTask);
-        else db.moves.push(newTask);
-        
-        showModule(type); // Refresh to see it
-    }
+    // 1. Ask for all details
+    const desc = prompt("Enter Task Description:");
+    if (!desc) return; // Stop if cancelled
+
+    const who = prompt("Who is responsible?", "TBC");
+    const due = prompt("Due Date?", "TBC");
+    const status = prompt("Current Status?", "New");
+
+    // 2. Create the new task object
+    const newTask = {
+        "taskid": "NEW-" + Math.floor(Math.random() * 999),
+        "taskdescription": desc,
+        "ward": currentWard,
+        "whoresponsible": who,
+        "datedue": due,
+        "currentstatus": status
+    };
+    
+    // 3. Save to the correct list
+    if (type === 'enablers') db.enablers.push(newTask);
+    else db.moves.push(newTask);
+    
+    // 4. Refresh the screen so you see it immediately
+    showModule(type); 
+}
 
     function saveComment(id, val) {
         wardData[currentWard][id] = val;
