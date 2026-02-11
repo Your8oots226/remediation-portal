@@ -194,11 +194,11 @@
                     const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
                     
-                    // Added: oninput="autoResize(this)" and removed fixed height styles
+                    // FIXED: Increased min-height to 32px and padding for better UI start state
                     return `
                         <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 40% 60%; gap:10px; padding:4px 0; border-bottom:1px solid #e2e8f0; align-items:start;">
-                            <div style="font-size:0.8rem; line-height:1.3; padding-top:2px;">${desc}</div>
-                            <textarea class="comment-input" style="height:24px; overflow-y:hidden; font-size:0.8rem; padding:4px; border:1px solid #cbd5e1; width:100%; resize:none;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
+                            <div style="font-size:0.8rem; line-height:1.3; padding-top:6px;">${desc}</div>
+                            <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none; line-height:1.4;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
                         </div>`;
                 }).join('');
                 
@@ -241,15 +241,15 @@
                 const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
                     .map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
 
-                // Added: oninput="autoResize(this)" and overflow-y:hidden
+                // FIXED: Increased min-height to 32px and padding
                 return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:30px;">
-                        <div style="font-size:0.75rem; color:#64748b; padding-top:4px;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:4px;">${desc}</div>
-                        <div><input type="text" value="${savedWho}" placeholder="Who..." oninput="saveComment('${id}_who', this.value)" style="border:1px solid #ddd; width:95%; font-size:0.75rem; padding:2px;"></div>
-                        <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%;"></div>
-                        <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="height:24px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:2px; border:1px solid #cbd5e1;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
+                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
+                        <div><input type="text" value="${savedWho}" placeholder="Who..." oninput="saveComment('${id}_who', this.value)" style="border:1px solid #ddd; width:95%; font-size:0.75rem; padding:4px; margin-top:4px;"></div>
+                        <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;"></div>
+                        <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
                     </div>`;
             }).join('');
 
@@ -260,9 +260,8 @@
                 ${rows}`;
         }
         
-        // --- NEW STEP: FORCE RESIZE ALL TEXTAREAS ON LOAD ---
-        // This ensures saved text expands the box immediately
-        document.querySelectorAll('textarea').forEach(el => autoResize(el));
+        // Resize check on load to fit content
+        setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100);
         
         switchView('view-content');
     }
@@ -332,17 +331,38 @@
         // 1. Hide buttons
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         
-        // 2. FORCE EXPAND ALL TEXTAREAS (Fixes text cut-off)
+        // 2. THE MAGIC SWAP: Convert Textareas to Divs for perfect PDF wrapping
+        let swapList = [];
         document.querySelectorAll('textarea').forEach(el => {
-            el.style.height = 'auto';
-            el.style.height = el.scrollHeight + 'px';
+            // Create a temporary div to replace the textarea
+            const div = document.createElement('div');
+            div.innerText = el.value; // Copy the text
+            
+            // Copy styles so it looks identical
+            div.style.width = '100%';
+            div.style.minHeight = el.style.height; // Use the expanded height
+            div.style.fontSize = getComputedStyle(el).fontSize;
+            div.style.padding = '5px';
+            div.style.border = '1px solid #ccc';
+            div.style.borderRadius = '4px';
+            div.style.whiteSpace = 'pre-wrap'; // This ensures text wraps correctly!
+            div.style.fontFamily = 'sans-serif';
+            div.style.backgroundColor = '#fff';
+            
+            // Hide textarea, show div
+            el.style.display = 'none';
+            el.parentNode.insertBefore(div, el);
+            swapList.push({ area: el, replacement: div });
         });
 
-        // 3. SCOPE FILTER
+        // 3. SCOPE FILTER (Hide empty rows)
         let hiddenElements = [];
         if (currentType === 'brief') {
             document.querySelectorAll('.lib-row').forEach(row => {
-                const note = row.querySelector('textarea').value.trim();
+                // Check the value in the temporary div, not the hidden textarea
+                const div = row.querySelector('div[style*="pre-wrap"]'); 
+                const note = div ? div.innerText.trim() : "";
+                
                 if (!note) {
                     row.style.display = 'none'; 
                     hiddenElements.push(row);
@@ -371,9 +391,14 @@
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
-            // Restore
+            // 4. RESTORE: Swap Divs back to Textareas
             document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
             hiddenElements.forEach(el => el.style.display = ''); 
+            
+            swapList.forEach(item => {
+                item.replacement.remove(); // Delete the temporary div
+                item.area.style.display = ''; // Show the editable textarea again
+            });
         });
     }  
 function autoResize(el) {
