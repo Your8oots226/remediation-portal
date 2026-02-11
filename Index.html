@@ -73,21 +73,11 @@
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, {type: 'array'});
-                
-                // Find all the necessary sheets
                 const libName = wb.SheetNames.find(n => n.toLowerCase().includes('library'));
                 const baseName = wb.SheetNames.find(n => n.toLowerCase().includes('baseline'));
-                const enablersName = wb.SheetNames.find(n => n.toLowerCase().includes('enablers'));
-                const movesName = wb.SheetNames.find(n => n.toLowerCase().includes('moves'));
-                
-                // Load data into our database object
                 db.library = XLSX.utils.sheet_to_json(wb.Sheets[libName]);
                 db.depts = XLSX.utils.sheet_to_json(wb.Sheets[baseName]);
-                db.enablers = XLSX.utils.sheet_to_json(wb.Sheets[enablersName]) || [];
-                db.moves = XLSX.utils.sheet_to_json(wb.Sheets[movesName]) || [];
-                
                 renderHome();
-                alert("Master Registry Loaded: Enablers and Moves found!");
             };
             reader.readAsArrayBuffer(file);
         }
@@ -112,7 +102,64 @@
             wardData[currentWard][itemDesc] = val;
         }
 
-        <div><strong>${desc}</strong><br><small style="color:#3b82f6; font-weight:bold;">STATUS: ${status}</small></div>
+        function showModule(type) {
+            const body = document.getElementById('moduleBody');
+            body.innerHTML = "";
+            
+            // 1. SCOPE BUILDER (Your existing logic)
+            if (type === 'brief') {
+                document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
+                renderScopeBuilder(body);
+            } 
+            
+            // 2. ENABLERS & MOVES (The New Task Trackers)
+            else if (type === 'enablers' || type === 'moves') {
+                const title = type === 'enablers' ? "Estates Enablers (Construction)" : "Ward Moves (Operational)";
+                document.getElementById('moduleTitle').innerText = title;
+                
+                // Select the correct tab data from Excel
+                const sheetData = type === 'enablers' ? db.enablers : db.moves;
+                const wardTasks = sheetData.filter(i => findVal(i, 'ward') === currentWard);
+
+                if (wardTasks.length === 0) {
+                    body.innerHTML = `<div class="card">No ${type} listed for this ward in Excel.</div>`;
+                } else {
+                    let rows = wardTasks.map(t => {
+                        const id = findVal(t, 'taskid') || "T-00";
+                        const desc = findVal(t, 'taskdescription') || "";
+                        const who = findVal(t, 'whoresponsible') || "TBC";
+                        const due = findVal(t, 'datedue') || "Pending";
+                        const status = findVal(t, 'currentstatus') || "Not Started";
+                        
+                        // Use existing memory for the specific task ID
+                        const savedComment = wardData[currentWard][id] || "";
+
+                        return `
+                            <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
+                                <div style="font-size:0.8rem; color:#64748b;">${id}</div>
+                                <div><strong>${desc}</strong><br><small style="color:#3b82f6">${status}</small></div>
+                                <div style="font-size:0.85rem;">${who}</div>
+                                <div style="font-size:0.85rem;">${due}</div>
+                                <div>
+                                    <textarea class="comment-input" 
+                                              style="height: 40px;" 
+                                              placeholder="Update status/notes..." 
+                                              oninput="saveComment('${id}', this.value)">${savedComment}</textarea>
+                                </div>
+                            </div>`;
+                    }).join('');
+
+                    body.innerHTML = `
+                        <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:white;">
+                            <div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
+                                <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Meeting Notes</div>
+                            </div>
+                            ${rows}
+                        </div>`;
+                }
+            }
+            switchView('view-content');
+        }
 
         function switchView(id) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
