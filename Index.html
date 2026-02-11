@@ -142,100 +142,113 @@
 
     // 4. THE MODULE BUILDER (Scope, Enablers, Moves)
     function showModule(type) {
-        currentType = type;
-        const body = document.getElementById('moduleBody');
-        body.innerHTML = "";
+    currentType = type;
+    const body = document.getElementById('moduleBody');
+    body.innerHTML = "";
+    
+    // 1. DATE FORMATTING FOR HEADER
+    const reportDate = new Date().toLocaleDateString('en-GB', { 
+        day: 'numeric', month: 'long', year: 'numeric' 
+    });
+
+    // 2. NAVIGATION BUTTONS (Hidden during print)
+    const navButtons = `
+        <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
+            <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button>
+            <button class="btn" style="background:#ef4444;" onclick="downloadPDF()">Download PDF</button>
+            ${type !== 'brief' ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Task</button>` : ''}
+        </div>`;
+
+    // 3. REPORT HEADER (Visible on Screen & PDF)
+    const pdfHeader = `
+        <div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end;">
+            <div>
+                <h2 style="margin:0; font-size:1.5rem; color:#1e293b;">${currentWard}</h2>
+                <span style="font-size:0.9rem; color:#64748b; font-weight:bold;">${type === 'brief' ? 'Scope Builder Report' : 'Task Tracker Report'}</span>
+            </div>
+            <div style="font-size:0.9rem; color:#333;"><strong>Date:</strong> ${reportDate}</div>
+        </div>`;
+
+    // --- A. SCOPE BUILDER ---
+    if (type === 'brief') {
+        document.getElementById('moduleTitle').innerText = "Scope Builder";
+        body.innerHTML = navButtons + pdfHeader;
         
-        // Navigation Buttons (Tagged with 'no-print' so they don't show on PDF)
-        const navButtons = `
-            <div class="no-print" style="margin-bottom:15px; display:flex; gap:10px;">
-                <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button>
-                <button class="btn" style="background:#ef4444;" onclick="downloadPDF()">Download PDF</button>
-                ${type !== 'brief' ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Task</button>` : ''}
-            </div>`;
+        const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
+        const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
 
-        // --- A. SCOPE BUILDER ---
-        if (type === 'brief') {
-            document.getElementById('moduleTitle').innerText = "Scope Builder";
-            body.innerHTML = navButtons;
-            
-            // 1. SPECIFIC HEADER FIX: Added 'scopeitemdescription'
-            const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
-            const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
+        if (cats.length === 0) body.innerHTML += `<div style="color:red;">Error: No Category column found.</div>`;
 
-            if (cats.length === 0) body.innerHTML += `<div class="card" style="color:red;">Error: Could not find 'Category' column.</div>`;
-
-            cats.forEach(cat => {
-                const items = db.library.filter(i => getCat(i) === cat);
-                let rows = items.map(i => {
-                    // Added 'scopeitemdescription' specifically for your file
-                    const desc = findVal(i, 'scopeitemdescription') || 
-                                 findVal(i, 'description') || 
-                                 findVal(i, 'item') || 
-                                 "Unknown Item";
-                    
-                    const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
-                    
-                    // COMPACT ROW STYLING
-                    return `
-                        <div class="lib-row" style="grid-template-columns: 2fr 1.5fr; padding:4px 0; border-bottom:1px solid #eee;">
-                            <div style="font-size:0.8rem; padding:4px;">${desc}</div>
-                            <textarea class="comment-input" style="height:25px; min-height:25px; font-size:0.8rem; padding:2px;" placeholder="Notes..." oninput="saveComment('${desc}', this.value)">${saved}</textarea>
-                        </div>`;
-                }).join('');
-                // COMPACT HEADER MARGINS
-                body.innerHTML += `<div style="margin-bottom:10px; page-break-inside:avoid;"><div class="row-header" style="padding:5px;">${cat}</div>${rows}</div>`;
-            });
-        } 
-        
-        // --- B. TASK TRACKERS ---
-        else {
-            const isEnabler = type === 'enablers';
-            document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
-            body.innerHTML = navButtons;
-
-            const sheetData = isEnabler ? db.enablers : db.moves;
-            const tasks = sheetData.filter(t => findVal(t, 'ward') === currentWard || findVal(t, 'departmentalname') === currentWard);
-
-            let rows = tasks.map(t => {
-                const id = findVal(t, 'taskid') || "T";
-                const desc = findVal(t, 'taskdescription') || "";
-                const who = findVal(t, 'whoresponsible') || "TBC";
-                const due = findVal(t, 'datedue') || "";
-                const status = findVal(t, 'currentstatus') || "Not Started";
-                const saved = (wardData[currentWard] && wardData[currentWard][id]) || "";
-
-                // Traffic Light Logic
-                let rowColor = "";
-                if (due && status !== 'Complete') {
-                    const diffDays = Math.ceil((new Date(due) - new Date()) / (1000 * 60 * 60 * 24)); 
-                    if (diffDays < 0) rowColor = "background-color: #fee2e2;"; // Soft Red
-                    else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; // Soft Amber
-                }
-
-                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
-                    .map(opt => `<option value="${opt}" ${status === opt ? 'selected' : ''}>${opt}</option>`).join('');
-
-                // COMPACT ROW STYLING (Reduced Padding & Height)
+        cats.forEach(cat => {
+            const items = db.library.filter(i => getCat(i) === cat);
+            let rows = items.map(i => {
+                const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
+                const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
+                
+                // COMPACT ROW (Page break avoid ensures rows don't get cut in half)
                 return `
-                    <div class="lib-row" style="grid-template-columns: 0.4fr 2fr 0.8fr 0.8fr 0.8fr 1.5fr; align-items:center; ${rowColor} padding:2px 0; border-bottom:1px solid #eee;">
-                        <div style="font-size:0.75rem; color:#64748b;">${id}</div>
-                        <div style="font-size:0.85rem; font-weight:600;">${desc}</div>
-                        <div style="font-size:0.8rem;">${who}</div>
-                        <div><input type="date" value="${due}" onchange="updateTask('${id}', 'datedue', this.value)" style="border:none; background:transparent; font-size:0.8rem;"></div>
-                        <div><select onchange="updateTask('${id}', 'currentstatus', this.value)" style="border:1px solid #ddd; padding:2px; font-size:0.8rem; border-radius:3px;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="height:25px; min-height:25px; font-size:0.8rem; padding:2px;" oninput="saveComment('${id}', this.value)">${saved}</textarea>
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 2fr 1.5fr; padding:5px 0; border-bottom:1px solid #e2e8f0;">
+                        <div style="font-size:0.85rem; padding-right:10px;">${desc}</div>
+                        <textarea class="comment-input" style="height:22px; min-height:22px; font-size:0.85rem; padding:2px; border:1px solid #cbd5e1;" placeholder="Notes..." oninput="saveComment('${desc}', this.value)">${saved}</textarea>
                     </div>`;
             }).join('');
-
+            
             body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.4fr 2fr 0.8fr 0.8fr 0.8fr 1.5fr; padding:5px; font-size:0.85rem;">
-                    <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div>
-                </div>
-                ${rows}`;
-        }
-        switchView('view-content');
+                <div style="margin-bottom:15px; page-break-inside:avoid;">
+                    <div class="row-header" style="background:#f1f5f9; color:#334155; padding:6px; font-size:0.9rem; border-left:4px solid #3b82f6;">${cat}</div>
+                    ${rows}
+                </div>`;
+        });
+    } 
+    
+    // --- B. TASK TRACKERS ---
+    else {
+        const isEnabler = type === 'enablers';
+        document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
+        body.innerHTML = navButtons + pdfHeader;
+
+        const sheetData = isEnabler ? db.enablers : db.moves;
+        const tasks = sheetData.filter(t => findVal(t, 'ward') === currentWard || findVal(t, 'departmentalname') === currentWard);
+
+        let rows = tasks.map(t => {
+            const id = findVal(t, 'taskid') || "T";
+            const desc = findVal(t, 'taskdescription') || "";
+            const who = findVal(t, 'whoresponsible') || "";
+            const due = findVal(t, 'datedue') || "";
+            const status = findVal(t, 'currentstatus') || "Not Started";
+            const saved = (wardData[currentWard] && wardData[currentWard][id]) || "";
+
+            // Traffic Light Logic
+            let rowColor = "";
+            if (due && status !== 'Complete') {
+                const diffDays = Math.ceil((new Date(due) - new Date()) / (1000 * 60 * 60 * 24)); 
+                if (diffDays < 0) rowColor = "background-color: #fee2e2;"; 
+                else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; 
+            }
+
+            const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
+                .map(opt => `<option value="${opt}" ${status === opt ? 'selected' : ''}>${opt}</option>`).join('');
+
+            // SUPER COMPACT ROW for PDF
+            return `
+                <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 0.8fr 0.8fr 0.8fr 1.5fr; align-items:center; ${rowColor} padding:3px 0; border-bottom:1px solid #e2e8f0; min-height:30px;">
+                    <div style="font-size:0.75rem; color:#64748b;">${id}</div>
+                    <div style="font-size:0.8rem; font-weight:600; line-height:1.2;">${desc}</div>
+                    <div style="font-size:0.75rem;">${who}</div>
+                    <div><input type="date" value="${due}" onchange="updateTask('${id}', 'datedue', this.value)" style="border:none; background:transparent; font-size:0.75rem; width:100%;"></div>
+                    <div><select onchange="updateTask('${id}', 'currentstatus', this.value)" style="border:none; background:transparent; font-size:0.75rem; width:100%;">${statusOptions}</select></div>
+                    <textarea class="comment-input" style="height:20px; min-height:20px; font-size:0.75rem; padding:1px; border:1px solid #cbd5e1;" oninput="saveComment('${id}', this.value)">${saved}</textarea>
+                </div>`;
+        }).join('');
+
+        body.innerHTML += `
+            <div class="row-header" style="grid-template-columns: 0.4fr 2fr 0.8fr 0.8fr 0.8fr 1.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
+                <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div>
+            </div>
+            ${rows}`;
     }
+    switchView('view-content');
+}
 
     // 5. DATA HELPERS (Modal, Updates, Search)
     function openModal() {
@@ -298,26 +311,29 @@
     }
     
     function downloadPDF() {
-        // 1. Hide the buttons temporarily
-        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+    // 1. Hide buttons
+    document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+    
+    // 2. Select the content
+    const element = document.getElementById('moduleBody');
+    const title = document.getElementById('moduleTitle').innerText;
+    
+    // 3. High-Quality A4 Landscape Settings
+    // 'margin: 0.2' (inches) removes most empty white space
+    const opt = { 
+        margin:       0.2, 
+        filename:     `${currentWard}_${title}_${new Date().toISOString().slice(0,10)}.pdf`, 
+        image:        { type: 'jpeg', quality: 1.0 }, // Max quality
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true }, 
+        jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Avoids cutting text in half
+    };
 
-        const element = document.getElementById('moduleBody');
-        const title = document.getElementById('moduleTitle').innerText;
-        
-        // 2. Set A4 options (Landscape usually fits columns better)
-        const opt = { 
-            margin: 0.2, // Tighter margins
-            filename: `${currentWard}_${title}.pdf`, 
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } 
-        };
-
-        // 3. Save, then show buttons again
-        html2pdf().set(opt).from(element).save().then(() => {
-            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
-        });
-    }
+    // 4. Print & Restore
+    html2pdf().set(opt).from(element).save().then(() => {
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
+    });
+}
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
