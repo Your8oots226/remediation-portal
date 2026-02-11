@@ -84,9 +84,10 @@
             <div id="moduleBody" style="margin-top:20px;"></div>
         </div>
     <script>
-      // 1. DATABASE & STATE
+ // 1. DATABASE & CONFIG
     let db = { library: [], depts: [], enablers: [], moves: [] };
     let currentWard = "";
+    let currentType = ""; // Tracks if we are in 'enablers' or 'moves'
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
 
     // 2. ROBUST FILE LOADER
@@ -98,31 +99,23 @@
             try {
                 const data = new Uint8Array(e.target.result);
                 const wb = XLSX.read(data, {type: 'array'});
-                // Helper to find tabs even if capitalized differently
                 const getSheet = (name) => {
                     const actual = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
                     return actual ? XLSX.utils.sheet_to_json(wb.Sheets[actual]) : [];
                 };
                 
-                db.library = getSheet('library');
+                db.library = getSheet('library'); // Ensure tab is named 'Library'
                 db.depts = getSheet('baseline');
                 db.enablers = getSheet('enablers');
                 db.moves = getSheet('moves');
 
-                if (!db.library.length || !db.depts.length) {
-                    alert("Warning: 'Library' or 'Baseline' tabs seem empty or missing.");
-                }
-                
                 renderHome();
-            } catch (err) {
-                console.error(err);
-                alert("Error reading file. Check console for details.");
-            }
+            } catch (err) { console.error(err); alert("File Load Error"); }
         };
         reader.readAsArrayBuffer(file);
     }
 
-    // 3. NAVIGATION & VIEWS
+    // 3. NAVIGATION
     function switchView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -131,49 +124,46 @@
     function selectWard(name) {
         currentWard = name;
         if (!wardData[currentWard]) wardData[currentWard] = {};
-        
-        // Update Header & Switch to Menu
         const heading = document.getElementById('deptHeading');
         if (heading) heading.innerText = currentWard;
         switchView('view-menu');
     }
 
-    // 4. HOME SCREEN (Ward List)
     function renderHome() {
         const list = document.getElementById('deptList');
         if (!list) return;
-        
         list.innerHTML = db.depts.map(d => {
-            // Find 'Ward' or 'Department' or 'Departmental Name'
             const name = findVal(d, 'ward') || findVal(d, 'department') || findVal(d, 'departmentalname') || "Unnamed";
             return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
         }).join('');
     }
 
-    function filterWards() {
-        const q = document.getElementById('wardSearch').value.toLowerCase();
-        document.querySelectorAll('#deptList .card').forEach(c => {
-            c.style.display = c.innerText.toLowerCase().includes(q) ? "" : "none";
-        });
-    }
-
-    // 5. THE MAIN MODULE BUILDER (Scope, Enablers, Moves)
+    // 4. THE MODULE BUILDER (Scope, Enablers, Moves)
     function showModule(type) {
+        currentType = type; // Remember where we are for the modal
         const body = document.getElementById('moduleBody');
         body.innerHTML = "";
         
-        // Universal Back Button
         const backBtn = `<button class="btn" style="background:#64748b; margin-bottom:20px;" onclick="switchView('view-menu')">← Back to Menu</button>`;
 
-        // --- TYPE A: SCOPE BUILDER ---
+        // --- A. SCOPE BUILDER (Improved Header Search) ---
         if (type === 'brief') {
             document.getElementById('moduleTitle').innerText = "Scope Builder";
-            body.innerHTML = backBtn;
+            body.innerHTML = backBtn + `<button class="btn" style="background:#ef4444; margin-left:10px;" onclick="downloadPDF()">Download PDF</button>`;
             
-            const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
-            
+            // Search for ANY column that looks like a category
+            const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
+            const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
+
+            if (cats.length === 0) {
+                 body.innerHTML += `<div class="card" style="color:red; border:1px solid red;">
+                    <strong>Setup Error:</strong> Could not find a 'Category' column in your Excel 'Library' tab.<br>
+                    Please ensure one column header is named 'Category', 'Group', or 'Element'.
+                 </div>`;
+            }
+
             cats.forEach(cat => {
-                const items = db.library.filter(i => findVal(i, 'category') === cat);
+                const items = db.library.filter(i => getCat(i) === cat);
                 let rows = items.map(i => {
                     const desc = findVal(i, 'description') || findVal(i, 'item') || "Item";
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
@@ -187,78 +177,113 @@
             });
         } 
         
-        // --- TYPE B: TASK TRACKERS (Enablers & Moves) ---
+        // --- B. TASK TRACKERS (Traffic Lights & Dropdowns) ---
         else {
             const isEnabler = type === 'enablers';
             document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
             
-            // Add Task Button
             body.innerHTML = backBtn + `
-                <button class="btn" style="background:#10b981; margin-bottom:15px;" onclick="addNewTask('${type}')">+ Add New Task</button>
+                <button class="btn" style="background:#10b981; margin-bottom:15px;" onclick="openModal()">+ Add New Task</button>
+                <button class="btn" style="background:#ef4444; margin-left:10px; margin-bottom:15px;" onclick="downloadPDF()">Download PDF</button>
             `;
 
             const sheetData = isEnabler ? db.enablers : db.moves;
-            // Filter by Ward Name (checks 'ward' or 'departmentalname')
-            const tasks = sheetData.filter(t => 
-                (findVal(t, 'ward') === currentWard) || 
-                (findVal(t, 'departmentalname') === currentWard)
-            );
+            const tasks = sheetData.filter(t => findVal(t, 'ward') === currentWard || findVal(t, 'departmentalname') === currentWard);
 
             let rows = tasks.map(t => {
                 const id = findVal(t, 'taskid') || "T";
                 const desc = findVal(t, 'taskdescription') || "";
                 const who = findVal(t, 'whoresponsible') || "TBC";
-                const due = findVal(t, 'datedue') || "-";
-                const status = findVal(t, 'currentstatus') || "New";
+                const due = findVal(t, 'datedue') || "";
+                const status = findVal(t, 'currentstatus') || "Not Started";
                 const saved = (wardData[currentWard] && wardData[currentWard][id]) || "";
 
+                // Traffic Light Logic
+                let rowColor = "";
+                if (due) {
+                    const today = new Date();
+                    const dueDate = new Date(due);
+                    const diffTime = dueDate - today;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                    
+                    if (status !== 'Complete') {
+                        if (diffDays < 0) rowColor = "background-color: #fca5a5;"; // Red (Late)
+                        else if (diffDays <= 7) rowColor = "background-color: #fde047;"; // Amber (Due soon)
+                    }
+                }
+
+                // Dropdown for Status
+                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
+                    .map(opt => `<option value="${opt}" ${status === opt ? 'selected' : ''}>${opt}</option>`).join('');
+
                 return `
-                    <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
+                    <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1.5fr; align-items:center; ${rowColor}">
                         <div style="font-size:0.8rem; color:#64748b;">${id}</div>
-                        <div><strong>${desc}</strong><br><small style="color:#3b82f6;">${status}</small></div>
+                        <div><strong>${desc}</strong></div>
                         <div style="font-size:0.85rem;">${who}</div>
-                        <div style="font-size:0.85rem;">${due}</div>
+                        <div><input type="date" value="${due}" onchange="updateTask('${id}', 'datedue', this.value)" style="border:1px solid #ccc; padding:4px; border-radius:4px;"></div>
+                        <div><select onchange="updateTask('${id}', 'currentstatus', this.value)" style="border:1px solid #ccc; padding:4px; border-radius:4px;">${statusOptions}</select></div>
                         <textarea class="comment-input" style="height:40px;" oninput="saveComment('${id}', this.value)">${saved}</textarea>
                     </div>`;
             }).join('');
 
             body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
-                    <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Notes</div>
+                <div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1fr 1.5fr;">
+                    <div>ID</div><div>Task</div><div>Who</div><div>Due Date</div><div>Status</div><div>Notes</div>
                 </div>
                 ${rows}`;
         }
-        
         switchView('view-content');
     }
 
-    // 6. HELPERS (Add Task, Save, Find)
-    function addNewTask(type) {
-    // 1. Ask for all details
-    const desc = prompt("Enter Task Description:");
-    if (!desc) return; // Stop if cancelled
+    // 5. DATA HELPERS (Modal, Updates, Search)
+    function openModal() {
+        document.getElementById('taskModal').style.display = 'flex';
+    }
 
-    const who = prompt("Who is responsible?", "TBC");
-    const due = prompt("Due Date?", "TBC");
-    const status = prompt("Current Status?", "New");
+    function closeModal() {
+        document.getElementById('taskModal').style.display = 'none';
+    }
 
-    // 2. Create the new task object
-    const newTask = {
-        "taskid": "NEW-" + Math.floor(Math.random() * 999),
-        "taskdescription": desc,
-        "ward": currentWard,
-        "whoresponsible": who,
-        "datedue": due,
-        "currentstatus": status
-    };
-    
-    // 3. Save to the correct list
-    if (type === 'enablers') db.enablers.push(newTask);
-    else db.moves.push(newTask);
-    
-    // 4. Refresh the screen so you see it immediately
-    showModule(type); 
-}
+    function saveNewTask() {
+        const desc = document.getElementById('mDesc').value;
+        const who = document.getElementById('mWho').value;
+        const due = document.getElementById('mDue').value;
+        const status = document.getElementById('mStatus').value;
+
+        if (!desc) return alert("Please enter a description");
+
+        const newTask = {
+            "taskid": "NEW-" + Math.floor(Math.random() * 999),
+            "taskdescription": desc,
+            "ward": currentWard,
+            "whoresponsible": who,
+            "datedue": due,
+            "currentstatus": status
+        };
+
+        if (currentType === 'enablers') db.enablers.push(newTask);
+        else db.moves.push(newTask);
+        
+        closeModal();
+        showModule(currentType); // Refresh screen
+    }
+
+    function updateTask(id, field, value) {
+        // Find task in local arrays to update it live
+        const list = currentType === 'enablers' ? db.enablers : db.moves;
+        const task = list.find(t => findVal(t, 'taskid') === id);
+        
+        // This is a simple update for the current session
+        // Note: Writing back to Excel is not possible in browser, 
+        // so we update the 'live' view.
+        if (task) {
+             // We need to find the actual key name in the object
+             const key = Object.keys(task).find(k => k.toLowerCase().includes(field));
+             if (key) task[key] = value;
+             showModule(currentType); // Re-render to update colors
+        }
+    }
 
     function saveComment(id, val) {
         wardData[currentWard][id] = val;
@@ -270,6 +295,40 @@
         const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
         return k ? obj[k] : "";
     }
+    
+    function downloadPDF() {
+        const element = document.getElementById('moduleBody');
+        const opt = { margin: 0.3, filename: `${currentWard}_Report.pdf`, jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' } };
+        html2pdf().set(opt).from(element).save();
+    }
 </script>
+<div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+        <h2 style="margin-top:0;">Add New Task</h2>
+        
+        <label style="display:block; margin-top:10px; font-weight:bold;">Task Description</label>
+        <input type="text" id="mDesc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+        
+        <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label>
+        <input type="text" id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+        
+        <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label>
+        <input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+        
+        <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
+        <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+            <option value="Not Started">Not Started</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Complete">Complete</option>
+            <option value="Late">Late</option>
+        </select>
+
+        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn" onclick="closeModal()" style="background:#64748b;">Cancel</button>
+            <button class="btn" onclick="saveNewTask()" style="background:#10b981;">Save Task</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
