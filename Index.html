@@ -204,12 +204,18 @@
 
         // 4. HOME & SEARCH
         function renderHome() {
-            const list = document.getElementById('deptList');
-            list.innerHTML = db.depts.map(d => {
-                const name = findVal(d, 'ward') || findVal(d, 'department');
-                return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
-            }).join('');
-        }
+        const list = document.getElementById('deptList');
+        // We look for any column that sounds like 'ward' or 'dept'
+        list.innerHTML = db.depts.map(d => {
+            const name = findVal(d, 'ward') || 
+                         findVal(d, 'department') || 
+                         findVal(d, 'dept') || 
+                         findVal(d, 'name') || 
+                         "Unnamed Ward";
+            
+            return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
+        }).join('');
+    }
 
         function filterWards() {
             const q = document.getElementById('wardSearch').value.toLowerCase();
