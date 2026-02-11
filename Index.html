@@ -105,58 +105,39 @@
         function showModule(type) {
             const body = document.getElementById('moduleBody');
             body.innerHTML = "";
-            
-            // 1. SCOPE BUILDER (Your existing logic)
             if (type === 'brief') {
-                document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
-                renderScopeBuilder(body);
-            } 
-            
-            // 2. ENABLERS & MOVES (The New Task Trackers)
-            else if (type === 'enablers' || type === 'moves') {
-                const title = type === 'enablers' ? "Estates Enablers (Construction)" : "Ward Moves (Operational)";
-                document.getElementById('moduleTitle').innerText = title;
+                document.getElementById('moduleTitle').innerText = "Scope Builder";
                 
-                // Select the correct tab data from Excel
-                const sheetData = type === 'enablers' ? db.enablers : db.moves;
-                const wardTasks = sheetData.filter(i => findVal(i, 'ward') === currentWard);
-
-                if (wardTasks.length === 0) {
-                    body.innerHTML = `<div class="card">No ${type} listed for this ward in Excel.</div>`;
-                } else {
-                    let rows = wardTasks.map(t => {
-                        const id = findVal(t, 'taskid') || "T-00";
-                        const desc = findVal(t, 'taskdescription') || "";
-                        const who = findVal(t, 'whoresponsible') || "TBC";
-                        const due = findVal(t, 'datedue') || "Pending";
-                        const status = findVal(t, 'currentstatus') || "Not Started";
+                // FIXED: Changed findValue to findVal to match the function above
+                const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
+                
+                cats.forEach(cat => {
+                    const items = db.library.filter(i => findVal(i, 'category') === cat);
+                    let rows = items.map(i => {
+                        const sub = findVal(i, 'subcategory') || "";
+                        const desc = findVal(i, 'description') || "";
+                        const existingComment = wardData[currentWard][desc] || "";
                         
-                        // Use existing memory for the specific task ID
-                        const savedComment = wardData[currentWard][id] || "";
-
-                        return `
-                            <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
-                                <div style="font-size:0.8rem; color:#64748b;">${id}</div>
-                                <div><strong>${desc}</strong><br><small style="color:#3b82f6">${status}</small></div>
-                                <div style="font-size:0.85rem;">${who}</div>
-                                <div style="font-size:0.85rem;">${due}</div>
-                                <div>
-                                    <textarea class="comment-input" 
-                                              style="height: 40px;" 
-                                              placeholder="Update status/notes..." 
-                                              oninput="saveComment('${id}', this.value)">${savedComment}</textarea>
-                                </div>
-                            </div>`;
+                    return `
+    <div class="lib-row" style="align-items: flex-start;">
+        <div><strong>${sub}</strong></div>
+        <div style="font-size:0.9rem; padding-right:10px;">${desc}</div>
+        <div>
+            <textarea class="comment-input" 
+                      style="height: 60px; resize: vertical; display: block;"
+                      placeholder="Add site notes..." 
+                      oninput="saveComment('${desc}', this.value)">${existingComment}</textarea>
+        </div>
+    </div>`;    
                     }).join('');
-
-                    body.innerHTML = `
-                        <div style="border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; background:white;">
-                            <div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
-                                <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Meeting Notes</div>
-                            </div>
+                    
+                    body.innerHTML += `
+                        <div style="margin-bottom:30px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden;">
+                            <div style="padding:15px; background:var(--primary); color:white; font-weight:bold;">${cat}</div>
+                            <div class="row-header"><div>Subcategory</div><div>Description</div><div>Comments</div></div>
                             ${rows}
                         </div>`;
-                }
+                });
             }
             switchView('view-content');
         }
