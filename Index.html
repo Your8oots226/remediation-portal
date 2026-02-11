@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,270 +8,172 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root {
-            --primary: #1e293b;
-            --accent: #3b82f6;
-            --bg: #f1f5f9;
-            --card: #ffffff;
-        }
-
-        body {
-            font-family: system-ui, sans-serif;
-            background: var(--bg);
-            margin: 0;
-            color: var(--primary);
-        }
-
-        .header {
-            background: var(--primary);
-            color: white;
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .container {
-            padding: 30px;
-            max-width: 1200px;
-            margin: auto;
-        }
-
+        :root { --primary: #1e293b; --accent: #3b82f6; --bg: #f1f5f9; --card: #ffffff; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; color: var(--primary); }
+        .header { background: var(--primary); color: white; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { padding: 30px; max-width: 1200px; margin: auto; }
+        
         /* Row-Based Briefing Layout */
-        .lib-row {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1.5fr;
-            gap: 15px;
-            background: white;
-            padding: 15px;
-            border-bottom: 1px solid #e2e8f0;
-            align-items: center;
-        }
+        .lib-row { display: grid; grid-template-columns: 1fr 2fr 1.5fr; gap: 15px; background: white; padding: 15px; border-bottom: 1px solid #e2e8f0; align-items: center; }
+        .row-header { font-weight: 800; font-size: 0.7rem; color: #64748b; text-transform: uppercase; padding: 10px 15px; background: #f1f5f9; display: grid; grid-template-columns: 1fr 2fr 1.5fr; gap: 15px; }
+        .comment-input { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 0.85rem; }
 
-        .row-header {
-            font-weight: 800;
-            font-size: 0.7rem;
-            color: #64748b;
-            text-transform: uppercase;
-            padding: 10px 15px;
-            background: #f1f5f9;
-            display: grid;
-            grid-template-columns: 1fr 2fr 1.5fr;
-            gap: 15px;
-        }
-
+        .btn { background: var(--accent); color: white; padding: 12px 24px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; }
+        .search-input { width: 100%; padding: 15px; border-radius: 8px; border: 1px solid #cbd5e1; margin: 20px 0; box-sizing: border-box; }
+        .dept-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card); padding: 25px; border-radius: 12px; border-top: 5px solid var(--accent); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .view { display: none; } .view.active { display: block; }
         .comment-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            font-size: 0.85rem;
-        }
-
-        .btn {
-            background: var(--accent);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 6px;
-            border: none;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            margin: 20px 0;
-            box-sizing: border-box;
-        }
-
-        .dept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        .card {
-            background: var(--card);
-            padding: 25px;
-            border-radius: 12px;
-            border-top: 5px solid var(--accent);
-            cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .view {
-            display: none;
-        }
-
-        .view.active {
-            display: block;
-        }
-
-        .comment-input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            border-radius: 4px;
-            font-size: 0.85rem;
-            font-family: inherit;
-            line-height: 1.4;
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-family: inherit;
+        line-height: 1.4;
     </style>
 </head>
-
 <body>
-    <header class="header">
-        <h2>Remediation Command Center</h2>
-    </header>
+    <header class="header"><h2>Remediation Command Center</h2></header>
     <div class="container">
         <div id="view-home" class="view active">
-            <button class="btn" onclick="document.getElementById('fileInput').click()">↑ Upload Master Registry</button>
-
-            <input type="file" id="fileInput" style="display:none;" onchange="handleFile(event)">
-
-            <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..."
-                onkeyup="filterWards()">
-            <div id="deptList" class="dept-grid"></div>
-        </div>
+    <button class="btn" onclick="document.getElementById('fileInput').click()">↑ Upload Master Registry</button>
+    
+    <input type="file" id="fileInput" style="display:none;" onchange="handleFile(event)">
+    
+    <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..." onkeyup="filterWards()">
+    <div id="deptList" class="dept-grid"></div>
+</div>
         <div id="view-menu" class="view">
             <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back to Wards</button>
             <h1 id="deptHeading" style="margin-top:25px;"></h1>
-
+            
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                <div class="card" onclick="showModule('brief')">
-                    <h3>📄 Scope Builder</h3>
-                    <p>Construction Items</p>
-                </div>
-                <div class="card" style="border-top-color: #f59e0b" onclick="showModule('enablers')">
-                    <h3>🚧 Enablers</h3>
-                    <p>Estates Tasks</p>
-                </div>
-                <div class="card" style="border-top-color: #10b981" onclick="showModule('moves')">
-                    <h3>📦 Ward Moves</h3>
-                    <p>Clinical Tasks</p>
-                </div>
+                <div class="card" onclick="showModule('brief')"><h3>📄 Scope Builder</h3><p>Construction Items</p></div>
+                <div class="card" style="border-top-color: #f59e0b" onclick="showModule('enablers')"><h3>🚧 Enablers</h3><p>Estates Tasks</p></div>
+                <div class="card" style="border-top-color: #10b981" onclick="showModule('moves')"><h3>📦 Ward Moves</h3><p>Clinical Tasks</p></div>
             </div>
         </div>
-        <hr style="border: 0; border-top: 1px solid #e2e8f0;">
-        <h2 id="moduleTitle" style="margin-top:20px;"></h2>
-        <div id="moduleBody" style="margin-top:20px;"></div>
-    </div>
-    <script>
-        // 1. DATABASE & INITIAL STATE
-        let db = { library: [], depts: [], enablers: [], moves: [] };
-        let currentWard = "";
-        let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
+            <hr style="border: 0; border-top: 1px solid #e2e8f0;">
+            <h2 id="moduleTitle" style="margin-top:20px;"></h2>
+            <div id="moduleBody" style="margin-top:20px;"></div>
+        </div>
+ <script>
+    // 1. DATABASE & INITIAL STATE
+    let db = { library: [], depts: [], enablers: [], moves: [] };
+    let currentWard = "";
+    let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
 
-        // 2. FILE LOADING
-        function handleFile(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const wb = XLSX.read(data, { type: 'array' });
-                    const getSheet = (name) => {
-                        const actualName = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
-                        return actualName ? XLSX.utils.sheet_to_json(wb.Sheets[actualName]) : [];
-                    };
-                    db.library = getSheet('library');
-                    db.depts = getSheet('baseline');
-                    db.enablers = getSheet('enablers');
-                    db.moves = getSheet('moves');
-                    renderHome();
-                } catch (err) {
-                    console.error(err);
-                    alert("Error reading Excel. Please check tab names.");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+    // 2. FILE LOADING
+    function handleFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const getSheet = (name) => {
+                    const actualName = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
+                    return actualName ? XLSX.utils.sheet_to_json(wb.Sheets[actualName]) : [];
+                };
+                db.library = getSheet('library');
+                db.depts = getSheet('baseline');
+                db.enablers = getSheet('enablers');
+                db.moves = getSheet('moves');
+                renderHome();
+            } catch (err) {
+                console.error(err);
+                alert("Error reading Excel. Please check tab names.");
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
-        // 3. NAVIGATION
-        function switchView(id) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
+    // 3. NAVIGATION
+    function switchView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
 
-        function selectWard(name) {
-            currentWard = name;
-            if (!wardData[currentWard]) wardData[currentWard] = {};
-            document.getElementById('deptHeading').innerText = currentWard;
-            switchView('view-menu');
-        }
+    function selectWard(name) {
+        currentWard = name;
+        if (!wardData[currentWard]) wardData[currentWard] = {};
+        document.getElementById('deptHeading').innerText = currentWard;
+        switchView('view-menu');
+    }
 
-        // 4. HOME & SEARCH
-        function renderHome() {
-            const list = document.getElementById('deptList');
-            list.innerHTML = db.depts.map(d => {
-                const name = findVal(d, 'ward') || findVal(d, 'department');
-                return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
-            }).join('');
-        }
+    // 4. HOME & SEARCH
+    function renderHome() {
+        const list = document.getElementById('deptList');
+        list.innerHTML = db.depts.map(d => {
+            const name = findVal(d, 'ward') || findVal(d, 'department');
+            return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
+        }).join('');
+    }
 
-        function filterWards() {
-            const q = document.getElementById('wardSearch').value.toLowerCase();
-            document.querySelectorAll('#deptList .card').forEach(c => {
-                c.style.display = c.innerText.toLowerCase().includes(q) ? "" : "none";
-            });
-        }
+    function filterWards() {
+        const q = document.getElementById('wardSearch').value.toLowerCase();
+        document.querySelectorAll('#deptList .card').forEach(c => {
+            c.style.display = c.innerText.toLowerCase().includes(q) ? "" : "none";
+        });
+    }
 
-        // 5. DATA HELPERS
-        function findVal(obj, key) {
-            if (!obj) return "";
-            const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
-            return k ? obj[k] : "";
-        }
+    // 5. DATA HELPERS
+    function findVal(obj, key) {
+        if (!obj) return "";
+        const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
+        return k ? obj[k] : "";
+    }
 
-        function saveComment(id, val) {
-            wardData[currentWard][id] = val;
-            localStorage.setItem('wardData', JSON.stringify(wardData));
-        }
+    function saveComment(id, val) {
+        wardData[currentWard][id] = val;
+        localStorage.setItem('wardData', JSON.stringify(wardData));
+    }
 
-        // 6. THE MODULE VIEW (Fixes Line 126 & backticks)
-        function showModule(type) {
-            const body = document.getElementById('moduleBody');
-            body.innerHTML = "";
-
-            if (type === 'brief') {
-                document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
-                const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
-                cats.forEach(cat => {
-                    const items = db.library.filter(i => findVal(i, 'category') === cat);
-                    let rows = items.map(i => {
-                        const desc = findVal(i, 'description') || "";
-                        const saved = wardData[currentWard][desc] || "";
-                        return `
+    // 6. THE MODULE VIEW (Fixes Line 126 & backticks)
+    function showModule(type) {
+        const body = document.getElementById('moduleBody');
+        body.innerHTML = "";
+        
+        if (type === 'brief') {
+            document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
+            const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
+            cats.forEach(cat => {
+                const items = db.library.filter(i => findVal(i, 'category') === cat);
+                let rows = items.map(i => {
+                    const desc = findVal(i, 'description') || "";
+                    const saved = wardData[currentWard][desc] || "";
+                    return `
                         <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
                             <div style="font-size:0.9rem;">${desc}</div>
                             <textarea class="comment-input" oninput="saveComment('${desc}', this.value)">${saved}</textarea>
                         </div>`;
-                    }).join('');
-                    body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
-                });
-            } else {
-                const isEnabler = type === 'enablers';
-                document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
-                const tasks = (isEnabler ? db.enablers : db.moves).filter(t => findVal(t, 'ward') === currentWard);
-                let rows = tasks.map(t => {
-                    const id = findVal(t, 'taskid') || "T";
-                    const desc = findVal(t, 'taskdescription') || "";
-                    const who = findVal(t, 'whoresponsible') || "";
-                    const status = findVal(t, 'currentstatus') || "";
-                    const saved = wardData[currentWard][id] || "";
-                    return `
+                }).join('');
+                body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
+            });
+        } else {
+            const isEnabler = type === 'enablers';
+            document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
+            const tasks = (isEnabler ? db.enablers : db.moves).filter(t => findVal(t, 'ward') === currentWard);
+            let rows = tasks.map(t => {
+                const id = findVal(t, 'taskid') || "T";
+                const desc = findVal(t, 'taskdescription') || "";
+                const who = findVal(t, 'whoresponsible') || "";
+                const status = findVal(t, 'currentstatus') || "";
+                const saved = wardData[currentWard][id] || "";
+                return `
                     <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;">
                         <div style="font-size:0.8rem;">${id}</div>
                         <div><strong>${desc}</strong><br><small>STATUS: ${status}</small></div>
                         <div style="font-size:0.85rem;">${who}</div>
                         <textarea class="comment-input" oninput="saveComment('${id}', this.value)">${saved}</textarea>
                     </div>`;
-                }).join('');
-                body.innerHTML = `<div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;"><div>ID</div><div>Task</div><div>Who</div><div>Notes</div></div>${rows}`;
-            }
-            switchView('view-content');
+            }).join('');
+            body.innerHTML = `<div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;"><div>ID</div><div>Task</div><div>Who</div><div>Notes</div></div>${rows}`;
+        }
+        switchView('view-content');
     }
-</script>
+</script>  
 </body>
 </html>
