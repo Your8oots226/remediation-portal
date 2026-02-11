@@ -256,62 +256,49 @@
 
         // 6. THE MODULE VIEW (Fixes Line 126 & backticks)
         function showModule(type) {
-    const body = document.getElementById('moduleBody');
-    body.innerHTML = "";
-    
-    // 1. SCOPE BUILDER RESTORATION
-    if (type === 'brief') {
-        document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
-        const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
-        
-        cats.forEach(cat => {
-            const items = db.library.filter(i => findVal(i, 'category') === cat);
-            let rows = items.map(i => {
-                const desc = findVal(i, 'description') || "";
-                const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
-                return `
+            const body = document.getElementById('moduleBody');
+            body.innerHTML = "";
+
+            if (type === 'brief') {
+                document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
+                const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
+                cats.forEach(cat => {
+                    const items = db.library.filter(i => findVal(i, 'category') === cat);
+                    let rows = items.map(i => {
+                        const desc = findVal(i, 'description') || "";
+                        const saved = wardData[currentWard][desc] || "";
+                        return `
                     <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
-                        <div style="font-size:0.9rem; padding-right:10px;">${desc}</div>
-                        <textarea class="comment-input" placeholder="Notes..." oninput="saveComment('${desc}', this.value)">${saved}</textarea>
+                        <div style="font-size:0.9rem;">${desc}</div>
+                        <textarea class="comment-input" oninput="saveComment('${desc}', this.value)">${saved}</textarea>
                     </div>`;
-            }).join('');
-            body.innerHTML += `<div style="margin-bottom:25px;"><div class="row-header">${cat}</div>${rows}</div>`;
-        });
-    } 
-    // 2. ENABLERS & MOVES (Adding Due Date & Status back)
+            }).join(''); // This closes the .map() from line 267
+            
+            body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
+        }); // This closes the cats.forEach from line 265
+    } // This closes the if (type === 'brief') from line 262
     else {
-        const isEnabler = type === 'enablers';
-        document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
-        
-        const sheetData = isEnabler ? db.enablers : db.moves;
-        const tasks = sheetData.filter(t => findVal(t, 'ward') === currentWard || findVal(t, 'departmentalname') === currentWard);
-
-        let rows = tasks.map(t => {
-            const id = findVal(t, 'taskid') || "T";
-            const desc = findVal(t, 'taskdescription') || "";
-            const who = findVal(t, 'whoresponsible') || "TBC";
-            const due = findVal(t, 'datedue') || "Pending";
-            const status = findVal(t, 'currentstatus') || "Not Started";
-            const saved = (wardData[currentWard] && wardData[currentWard][id]) || "";
-
-            return `
-                <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
-                    <div style="font-size:0.8rem; color:#64748b;">${id}</div>
-                    <div><strong>${desc}</strong><br><small style="color:#3b82f6; font-weight:bold;">${status}</small></div>
-                    <div style="font-size:0.85rem;">${who}</div>
-                    <div style="font-size:0.85rem;">${due}</div>
-                    <textarea class="comment-input" style="height:40px;" oninput="saveComment('${id}', this.value)">${saved}</textarea>
-                </div>`;
-        }).join('');
-
-        body.innerHTML = `
-            <div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1fr 1.5fr;">
-                <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Notes</div>
-            </div>
-            ${rows}`;
-    }
-    switchView('view-content');
-} // Closes showModule
+                const isEnabler = type === 'enablers';
+                document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
+                const tasks = (isEnabler ? db.enablers : db.moves).filter(t => findVal(t, 'ward') === currentWard);
+                let rows = tasks.map(t => {
+                    const id = findVal(t, 'taskid') || "T";
+                    const desc = findVal(t, 'taskdescription') || "";
+                    const who = findVal(t, 'whoresponsible') || "";
+                    const status = findVal(t, 'currentstatus') || "";
+                    const saved = wardData[currentWard][id] || "";
+                    return `
+                    <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;">
+                        <div style="font-size:0.8rem;">${id}</div>
+                        <div><strong>${desc}</strong><br><small>STATUS: ${status}</small></div>
+                        <div style="font-size:0.85rem;">${who}</div>
+                        <textarea class="comment-input" oninput="saveComment('${id}', this.value)">${saved}</textarea>
+                    </div>`;
+                }).join('');
+                body.innerHTML = `<div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;"><div>ID</div><div>Task</div><div>Who</div><div>Notes</div></div>${rows}`;
+            }
+switchView('view-content');
+    } // Closes showModule
 </script>
 </body>
 </html>
