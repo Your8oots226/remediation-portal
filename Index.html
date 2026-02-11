@@ -122,12 +122,12 @@
         </div>
     <script>
  // 1. DATABASE & CONFIG
-    let db = { library: [], depts: [], enablers: [], moves: [] };
+    let db = { library: [], depts: [], enablers: [], moves: [], risks: [] }; // Added risks array
     let currentWard = "";
-    let currentType = ""; // Tracks if we are in 'enablers' or 'moves'
+    let currentType = "";
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
 
-    // 2. ROBUST FILE LOADER
+    // 2. FILE LOADER
     function handleFile(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -141,10 +141,11 @@
                     return actual ? XLSX.utils.sheet_to_json(wb.Sheets[actual]) : [];
                 };
                 
-                db.library = getSheet('library'); // Ensure tab is named 'Library'
+                db.library = getSheet('library');
                 db.depts = getSheet('baseline');
                 db.enablers = getSheet('enablers');
                 db.moves = getSheet('moves');
+                db.risks = getSheet('risk'); // Looks for 'Risk', 'Risks', or 'Risk Register'
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -175,7 +176,7 @@
         }).join('');
     }
 
-    // 4. THE MODULE BUILDER (Scope, Enablers, Moves)
+    // 4. MODULE BUILDER
     function showModule(type) {
         currentType = type;
         const body = document.getElementById('moduleBody');
@@ -229,7 +230,7 @@
             });
         }
         
-        // --- B. RISK REGISTER (UPDATED HEADERS) ---
+        // --- B. RISK REGISTER (THE MISSING LINK) ---
         else if (type === 'risks') {
             body.innerHTML = navButtons + pdfHeader;
             
@@ -240,8 +241,8 @@
             });
 
             let rows = tasks.map(t => {
-                const id = findVal(t, 'riskid') || "R";
-                const desc = findVal(t, 'riskdescription') || "";
+                const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
+                const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                 
                 // Load Saved Data OR Excel Defaults
                 const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "Low";
@@ -313,80 +314,91 @@
         switchView('view-content');
     }
 
-    // 5. DATA HELPERS (Modal, Updates, Search)
-    function openModal() {
-        document.getElementById('taskModal').style.display = 'flex';
+    // 5. HELPERS (Modal, PDF, Resize, FindVal)
+    function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+    
+    function downloadPDF() {
+        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+        // Magic Swap for PDF wrapping
+        let swapList = [];
+        document.querySelectorAll('textarea').forEach(el => {
+            const div = document.createElement('div');
+            div.innerText = el.value; 
+            div.style.width = '100%'; div.style.minHeight = el.style.height; 
+            div.style.fontSize = getComputedStyle(el).fontSize; div.style.padding = '5px'; 
+            div.style.border = '1px solid #ccc'; div.style.whiteSpace = 'pre-wrap'; div.style.fontFamily = 'sans-serif';
+            el.style.display = 'none'; el.parentNode.insertBefore(div, el);
+            swapList.push({ area: el, replacement: div });
+        });
+
+        // Scope Filter (Hide Empty)
+        let hiddenElements = [];
+        if (currentType === 'brief') {
+            document.querySelectorAll('.lib-row').forEach(row => {
+                const div = row.querySelector('div[style*="pre-wrap"]'); 
+                if (!div || !div.innerText.trim()) { row.style.display = 'none'; hiddenElements.push(row); }
+            });
+            document.querySelectorAll('.scope-category').forEach(cat => {
+                if (Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none').length === 0) {
+                    cat.style.display = 'none'; hiddenElements.push(cat);
+                }
+            });
+        }
+
+        const element = document.getElementById('moduleBody');
+        const title = document.getElementById('moduleTitle').innerText;
+        const orient = currentType === 'brief' ? 'portrait' : 'landscape';
+
+        const opt = { 
+            margin: [0.3, 0.3, 0.3, 0.3], filename: `${currentWard}_${title}.pdf`, 
+            image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, 
+            jsPDF: { unit: 'in', format: 'a4', orientation: orient }, pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
+            hiddenElements.forEach(el => el.style.display = ''); 
+            swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; });
+        });
     }
 
-    function closeModal() {
-        document.getElementById('taskModal').style.display = 'none';
-    }
-
+    function openModal() { document.getElementById('taskModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
+    
+    // UPDATED SAVE NEW TASK (Handles Risk creation too)
     function saveNewTask() {
-        // 1. Get Basic Description
         const desc = document.getElementById('mDesc').value;
         if (!desc) return alert("Enter description");
         const newId = "NEW-" + Math.floor(Math.random() * 999);
 
         let newTask = {};
 
-        // 2. LOGIC FOR RISKS vs TASKS
         if (currentType === 'risks') {
-            // If it's a Risk, we use defaults for Impact/Prob
+            // Risk Defaults
             newTask = { 
-                "riskid": newId, 
-                "riskdescription": desc, 
-                "ward": currentWard,
-                "impact": "Medium", // Default
-                "prob": "Medium",   // Default
-                "mitigationplan": ""
+                "riskid": newId, "riskdescription": desc, "ward": currentWard,
+                "impact": "Medium", "prob": "Medium", "mitigationplan": ""
             };
             db.risks.push(newTask);
         } else {
-            // If it's a Task, we use Who/Due/Status
+            // Task Defaults
             const who = document.getElementById('mWho').value;
             const due = document.getElementById('mDue').value;
             const status = document.getElementById('mStatus').value;
-            
             newTask = { 
-                "taskid": newId, 
-                "taskdescription": desc, 
-                "ward": currentWard, 
-                "whoresponsible": who, 
-                "datedue": due, 
-                "currentstatus": status
+                "taskid": newId, "taskdescription": desc, "ward": currentWard, 
+                "whoresponsible": who, "datedue": due, "currentstatus": status
             };
-
             if (currentType === 'enablers') db.enablers.push(newTask);
             else db.moves.push(newTask);
         }
-        
-        closeModal(); 
-        showModule(currentType);
-    }
-
-    function updateTask(id, field, value) {
-        // Find task in local arrays to update it live
-        const list = currentType === 'enablers' ? db.enablers : db.moves;
-        const task = list.find(t => findVal(t, 'taskid') === id);
-        
-        // This is a simple update for the current session
-        // Note: Writing back to Excel is not possible in browser, 
-        // so we update the 'live' view.
-        if (task) {
-             // We need to find the actual key name in the object
-             const key = Object.keys(task).find(k => k.toLowerCase().includes(field));
-             if (key) task[key] = value;
-             showModule(currentType); // Re-render to update colors
-        }
+        closeModal(); showModule(currentType);
     }
 
     function saveComment(id, val) {
-        if (!wardData[currentWard]) wardData[currentWard] = {};
-        wardData[currentWard][id] = val;
-        localStorage.setItem('wardData', JSON.stringify(wardData));
+        wardData[currentWard][id] = val; localStorage.setItem('wardData', JSON.stringify(wardData));
     }
-
+    
     function findVal(obj, key) {
         if (!obj) return "";
         const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
