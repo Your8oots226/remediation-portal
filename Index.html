@@ -150,82 +150,104 @@
 
         // HEADERS
         let headerTitle = currentWard; 
-        let subTitle = "Scope Builder Report";
+        let subTitle = "";
         
-        if (type === 'enablers') {
-            headerTitle = `${currentWard} Enablers`;
-            subTitle = "Estates & Pre-Works Tasks";
-        } else if (type === 'moves') {
-            headerTitle = `${currentWard} Ward Move`;
-            subTitle = "Operational Move Plan";
-        }
+        if (type === 'brief') subTitle = "Scope Builder Report";
+        else if (type === 'enablers') { headerTitle += " Enablers"; subTitle = "Estates Tasks"; }
+        else if (type === 'moves') { headerTitle += " Ward Move"; subTitle = "Move Plan"; }
+        else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; }
 
         // BUTTONS
         const navButtons = `
             <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
                 <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button>
                 <button class="btn" style="background:#ef4444;" onclick="downloadPDF()">Download PDF</button>
-                ${type !== 'brief' ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Task</button>` : ''}
+                ${type !== 'brief' ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Item</button>` : ''}
             </div>`;
 
-        // PDF HEADER
         const pdfHeader = `
             <div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end; padding-right:10px;">
-                <div>
-                    <h2 style="margin:0; font-size:1.4rem; color:#1e293b; font-weight:bold;">${headerTitle}</h2>
-                    <span style="font-size:0.8rem; color:#64748b;">${subTitle}</span>
-                </div>
+                <div><h2 style="margin:0; font-size:1.4rem; color:#1e293b; font-weight:bold;">${headerTitle}</h2><span style="font-size:0.8rem; color:#64748b;">${subTitle}</span></div>
                 <div style="font-size:0.8rem; color:#333; white-space:nowrap;"><strong>Date:</strong> ${reportDate}</div>
             </div>`;
 
+        document.getElementById('moduleTitle').innerText = subTitle;
+
         // --- A. SCOPE BUILDER ---
         if (type === 'brief') {
-            document.getElementById('moduleTitle').innerText = "Scope Builder";
             body.innerHTML = navButtons + pdfHeader;
-            
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
             const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
-
-            if (cats.length === 0) body.innerHTML += `<div style="color:red;">Error: No Category column found.</div>`;
 
             cats.forEach(cat => {
                 const items = db.library.filter(i => getCat(i) === cat);
                 let rows = items.map(i => {
                     const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
-                    
-                    // FIXED: Increased min-height to 32px and padding for better UI start state
                     return `
                         <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 40% 60%; gap:10px; padding:4px 0; border-bottom:1px solid #e2e8f0; align-items:start;">
                             <div style="font-size:0.8rem; line-height:1.3; padding-top:6px;">${desc}</div>
-                            <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none; line-height:1.4;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
+                            <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
                         </div>`;
                 }).join('');
-                
-                body.innerHTML += `
-                    <div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;">
-                        <div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px;">${cat}</div>
-                        ${rows}
-                    </div>`;
+                body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px;">${cat}</div>${rows}</div>`;
             });
-        } 
+        }
         
-        // --- B. TASK TRACKERS ---
-        else {
-            const isEnabler = type === 'enablers';
-            document.getElementById('moduleTitle').innerText = isEnabler ? "Enablers" : "Ward Moves";
+        // --- B. RISK REGISTER (UPDATED HEADERS) ---
+        else if (type === 'risks') {
             body.innerHTML = navButtons + pdfHeader;
-
-            const sheetData = isEnabler ? db.enablers : db.moves;
-            const tasks = sheetData.filter(t => {
+            
+            // Filter: Matches Ward OR Global (No Ward)
+            const tasks = db.risks.filter(t => {
                 const w = findVal(t, 'ward') || findVal(t, 'departmentalname');
                 return w === currentWard || !w;
             });
 
             let rows = tasks.map(t => {
+                const id = findVal(t, 'riskid') || "R";
+                const desc = findVal(t, 'riskdescription') || "";
+                
+                // Load Saved Data OR Excel Defaults
+                const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "Low";
+                const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "Low";
+                const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigationplan') || "";
+
+                // Traffic Light Logic (High Impact OR High Prob = Red)
+                let colorClass = "";
+                if (savedImp === 'High' || savedProb === 'High') colorClass = "background-color:#fee2e2;"; // Red
+                else if (savedImp === 'Medium' || savedProb === 'Medium') colorClass = "background-color:#fef9c3;"; // Amber
+
+                const impOptions = ['Low', 'Medium', 'High'].map(opt => `<option value="${opt}" ${savedImp === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                const probOptions = ['Low', 'Medium', 'High'].map(opt => `<option value="${opt}" ${savedProb === opt ? 'selected' : ''}>${opt}</option>`).join('');
+
+                return `
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.5fr 2fr 0.8fr 0.8fr 2.5fr; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
+                        <div style="font-size:0.8rem; font-weight:bold; padding-top:8px;">${desc}</div>
+                        
+                        <div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px; font-weight:bold;">${impOptions}</select></div>
+                        <div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${probOptions}</select></div>
+                        
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" placeholder="Mitigation Plan..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
+                    </div>`;
+            }).join('');
+
+            body.innerHTML += `
+                <div class="row-header" style="grid-template-columns: 0.5fr 2fr 0.8fr 0.8fr 2.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
+                    <div>ID</div><div>Risk Description</div><div>Impact</div><div>Prob</div><div>Mitigation Plan</div>
+                </div>${rows}`;
+        }
+
+        // --- C. TASK TRACKERS (Enablers & Moves) ---
+        else {
+            body.innerHTML = navButtons + pdfHeader;
+            const sheetData = type === 'enablers' ? db.enablers : db.moves;
+            const tasks = sheetData.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+
+            let rows = tasks.map(t => {
                 const id = findVal(t, 'taskid') || "T";
                 const desc = findVal(t, 'taskdescription') || "";
-                
                 const savedWho = (wardData[currentWard] && wardData[currentWard][id + '_who']) || findVal(t, 'whoresponsible') || "";
                 const savedDue = (wardData[currentWard] && wardData[currentWard][id + '_due']) || findVal(t, 'datedue') || "";
                 const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
@@ -237,11 +259,8 @@
                     if (diffDays < 0) rowColor = "background-color: #fee2e2;"; 
                     else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; 
                 }
+                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late'].map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
 
-                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
-                    .map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
-
-                // FIXED: Increased min-height to 32px and padding
                 return `
                     <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
@@ -252,17 +271,10 @@
                         <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
                     </div>`;
             }).join('');
-
-            body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div>
-                </div>
-                ${rows}`;
+            body.innerHTML += `<div class="row-header" style="grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
-        // Resize check on load to fit content
         setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100);
-        
         switchView('view-content');
     }
 
@@ -276,27 +288,46 @@
     }
 
     function saveNewTask() {
+        // 1. Get Basic Description
         const desc = document.getElementById('mDesc').value;
-        const who = document.getElementById('mWho').value;
-        const due = document.getElementById('mDue').value;
-        const status = document.getElementById('mStatus').value;
+        if (!desc) return alert("Enter description");
+        const newId = "NEW-" + Math.floor(Math.random() * 999);
 
-        if (!desc) return alert("Please enter a description");
+        let newTask = {};
 
-        const newTask = {
-            "taskid": "NEW-" + Math.floor(Math.random() * 999),
-            "taskdescription": desc,
-            "ward": currentWard,
-            "whoresponsible": who,
-            "datedue": due,
-            "currentstatus": status
-        };
+        // 2. LOGIC FOR RISKS vs TASKS
+        if (currentType === 'risks') {
+            // If it's a Risk, we use defaults for Impact/Prob
+            newTask = { 
+                "riskid": newId, 
+                "riskdescription": desc, 
+                "ward": currentWard,
+                "impact": "Medium", // Default
+                "prob": "Medium",   // Default
+                "mitigationplan": ""
+            };
+            db.risks.push(newTask);
+        } else {
+            // If it's a Task, we use Who/Due/Status
+            const who = document.getElementById('mWho').value;
+            const due = document.getElementById('mDue').value;
+            const status = document.getElementById('mStatus').value;
+            
+            newTask = { 
+                "taskid": newId, 
+                "taskdescription": desc, 
+                "ward": currentWard, 
+                "whoresponsible": who, 
+                "datedue": due, 
+                "currentstatus": status
+            };
 
-        if (currentType === 'enablers') db.enablers.push(newTask);
-        else db.moves.push(newTask);
+            if (currentType === 'enablers') db.enablers.push(newTask);
+            else db.moves.push(newTask);
+        }
         
-        closeModal();
-        showModule(currentType); // Refresh screen
+        closeModal(); 
+        showModule(currentType);
     }
 
     function updateTask(id, field, value) {
