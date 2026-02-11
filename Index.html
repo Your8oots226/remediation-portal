@@ -43,15 +43,15 @@
             <div id="deptList" class="dept-grid"></div>
         </div>
         <div id="view-menu" class="view">
-            <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back to Wards</button>
+            <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back</button>
             <h1 id="deptHeading" style="margin-top:25px;"></h1>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
-                <div class="card" onclick="showModule('brief')"><h3>📄 Scope Builder</h3><p>Construction Items</p></div>
-                <div class="card" style="border-top-color: #f59e0b" onclick="showModule('enablers')"><h3>🚧 Enablers</h3><p>Estates Tasks</p></div>
-                <div class="card" style="border-top-color: #10b981" onclick="showModule('moves')"><h3>📦 Ward Moves</h3><p>Clinical Tasks</p></div>
-            </div>
+            <div class="card" onclick="showModule('brief')"><h3>📄 Project Brief & Scope Builder</h3></div>
         </div>
+        <div id="view-content" class="view">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom: 20px;">
+                <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back</button>
+                <button class="btn" style="background:#10b981;" onclick="generatePDF()">↓ Download PDF Brief</button>
+            </div>
             <hr style="border: 0; border-top: 1px solid #e2e8f0;">
             <h2 id="moduleTitle" style="margin-top:20px;"></h2>
             <div id="moduleBody" style="margin-top:20px;"></div>
