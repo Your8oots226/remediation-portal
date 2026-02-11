@@ -49,6 +49,41 @@
         <button class="btn" style="background:#64748b; margin-bottom:20px;" onclick="switchView('view-home')">← Back to Wards</button>
         <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
         
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            
+            <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📄</div>
+                <h3>Scope Builder</h3>
+                <p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
+            </div>
+            
+            <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">🚧</div>
+                <h3>Enablers</h3>
+                <p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
+            </div>
+            
+            <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📦</div>
+                <h3>Ward Moves</h3>
+                <p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
+            </div>
+
+            <div class="card" onclick="showModule('risks')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div>
+                <h3>Risk Register</h3>
+                <p style="color:#64748b; font-size:0.9rem;">Risks, Issues & Mitigations</p>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="view-menu" class="view">
+    <div style="max-width:800px; margin:0 auto;">
+        <button class="btn" style="background:#64748b; margin-bottom:20px;" onclick="switchView('view-home')">← Back to Wards</button>
+        <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
             <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px;">
                 <div style="font-size:2rem; margin-bottom:10px;">📄</div>
