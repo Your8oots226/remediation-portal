@@ -58,162 +58,122 @@
             <h2 id="moduleTitle" style="margin-top:20px;"></h2>
             <div id="moduleBody" style="margin-top:20px;"></div>
         </div>
-    <script>
-      let db = { depts: [], library: [] };
-        let wardData = {}; // Stores your comments
-        let currentWard = "";
+ <script>
+    // 1. DATABASE & INITIAL STATE
+    let db = { library: [], depts: [], enablers: [], moves: [] };
+    let currentWard = "";
+    let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
 
-        function findVal(row, target) {
-            const keys = Object.keys(row);
-            const match = keys.find(k => k.toLowerCase().replace(/\s/g, '').includes(target.toLowerCase()));
-            return match ? row[match] : null;
-        }
-
-        function handleFile(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const wb = XLSX.read(data, {type: 'array'});
-            
-            // Helper to find sheets regardless of capitalization
-            const getSheet = (name) => {
-                const actualName = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
-                return actualName ? XLSX.utils.sheet_to_json(wb.Sheets[actualName]) : null;
-            };
-
-            db.library = getSheet('library');
-            db.depts = getSheet('baseline');
-            db.enablers = getSheet('enablers') || [];
-            db.moves = getSheet('moves') || [];
-
-            if (!db.library || !db.depts) {
-                alert("Error: Could not find 'Library' or 'Baseline' tabs in Excel.");
-                return;
+    // 2. FILE LOADING
+    function handleFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const wb = XLSX.read(data, {type: 'array'});
+                const getSheet = (name) => {
+                    const actualName = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
+                    return actualName ? XLSX.utils.sheet_to_json(wb.Sheets[actualName]) : [];
+                };
+                db.library = getSheet('library');
+                db.depts = getSheet('baseline');
+                db.enablers = getSheet('enablers');
+                db.moves = getSheet('moves');
+                renderHome();
+            } catch (err) {
+                console.error(err);
+                alert("Error reading Excel. Please check tab names.");
             }
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
-            renderHome();
-            console.log("Data loaded successfully:", db);
-        } catch (err) {
-            console.error("File processing error:", err);
-            alert("There was an error reading the file. Check the console for details.");
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
+    // 3. NAVIGATION
+    function switchView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
 
-        function renderHome(data = db.depts) {
-            let html = "";
-            data.forEach((d) => {
-                const name = findVal(d, 'department') || findVal(d, 'ward') || "Unknown Dept";
-                html += `<div class="card" onclick="openDept('${name}')"><strong>${name}</strong></div>`;
-            });
-            document.getElementById('deptList').innerHTML = html;
-        }
+    function selectWard(name) {
+        currentWard = name;
+        if (!wardData[currentWard]) wardData[currentWard] = {};
+        document.getElementById('deptHeading').innerText = currentWard;
+        switchView('view-menu');
+    }
 
-        function openDept(name) {
-            currentWard = name;
-            document.getElementById('deptHeading').innerText = name;
-            if (!wardData[name]) wardData[name] = {}; 
-            switchView('view-menu');
-        }
+    // 4. HOME & SEARCH
+    function renderHome() {
+        const list = document.getElementById('deptList');
+        list.innerHTML = db.depts.map(d => {
+            const name = findVal(d, 'ward') || findVal(d, 'department');
+            return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
+        }).join('');
+    }
 
-        function saveComment(itemDesc, val) {
-            wardData[currentWard][itemDesc] = val;
-        }
+    function filterWards() {
+        const q = document.getElementById('wardSearch').value.toLowerCase();
+        document.querySelectorAll('#deptList .card').forEach(c => {
+            c.style.display = c.innerText.toLowerCase().includes(q) ? "" : "none";
+        });
+    }
 
-        <div><strong>${desc}</strong><br><small style="color:#3b82f6; font-weight:bold;">STATUS: ${status}</small></div>
+    // 5. DATA HELPERS
+    function findVal(obj, key) {
+        if (!obj) return "";
+        const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
+        return k ? obj[k] : "";
+    }
 
-        function switchView(id) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-        }
+    function saveComment(id, val) {
+        wardData[currentWard][id] = val;
+        localStorage.setItem('wardData', JSON.stringify(wardData));
+    }
 
-        function filterWards() {
-            const q = document.getElementById('wardSearch').value.toLowerCase();
-            renderHome(db.depts.filter(d => (findVal(d, 'department') || "").toLowerCase().includes(q)));
-        }
- async function generatePDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-
-    // 1. Create the image object
-    const logo = new Image();
-    logo.src = 'logo.png';
-
-    // 2. Wait for the image to load using a 'Promise'
-    const logoLoaded = new Promise((resolve) => {
-        logo.onload = () => resolve(true);
-        logo.onerror = () => resolve(false);
-    });
-
-    const success = await logoLoaded;
-
-    if (success) {
-   // We set width to 30mm and use 0 to tell it "keep the natural height"
-        // This prevents the "stretching" look
-        const imgProps = doc.getImageProperties(logo);
-        const ratio = imgProps.height / imgProps.width;
-        const logoWidth = 21; 
-        const logoHeight = logoWidth * ratio;
+    // 6. THE MODULE VIEW (Fixes Line 126 & backticks)
+    function showModule(type) {
+        const body = document.getElementById('moduleBody');
+        body.innerHTML = "";
         
-        doc.addImage(logo, 'PNG', 245, 10, logoWidth, logoHeight);
-    }
-
-    // 3. Title & Header
-    doc.setFontSize(22);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Remediation Project Brief", 14, 22);
-
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Department: ${currentWard}`, 14, 30);
-    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 36);
-
- // 4. Data Gathering (Description now comes BEFORE Category)
-    const activeComments = wardData[currentWard] || {};
-    const tableData = [];
-
-    db.library.forEach(item => {
-        const desc = findVal(item, 'description');
-        if (activeComments[desc] && activeComments[desc].trim() !== "") {
-            tableData.push([
-                desc || "",                             // Column 0: Description
-                findVal(item, 'category') || "",       // Column 1: Category
-                activeComments[desc]                    // Column 2: Site Notes
-            ]);
+        if (type === 'brief') {
+            document.getElementById('moduleTitle').innerText = "Project Brief & Scope Builder";
+            const cats = [...new Set(db.library.map(i => findVal(i, 'category')))].filter(c => c);
+            cats.forEach(cat => {
+                const items = db.library.filter(i => findVal(i, 'category') === cat);
+                let rows = items.map(i => {
+                    const desc = findVal(i, 'description') || "";
+                    const saved = wardData[currentWard][desc] || "";
+                    return `
+                        <div class="lib-row" style="grid-template-columns: 2fr 1.5fr;">
+                            <div style="font-size:0.9rem;">${desc}</div>
+                            <textarea class="comment-input" oninput="saveComment('${desc}', this.value)">${saved}</textarea>
+                        </div>`;
+                }).join('');
+                body.innerHTML += `<div style="margin-bottom:20px;"><div class="row-header">${cat}</div>${rows}</div>`;
+            });
+        } else {
+            const isEnabler = type === 'enablers';
+            document.getElementById('moduleTitle').innerText = isEnabler ? "Estates Enablers" : "Ward Moves";
+            const tasks = (isEnabler ? db.enablers : db.moves).filter(t => findVal(t, 'ward') === currentWard);
+            let rows = tasks.map(t => {
+                const id = findVal(t, 'taskid') || "T";
+                const desc = findVal(t, 'taskdescription') || "";
+                const who = findVal(t, 'whoresponsible') || "";
+                const status = findVal(t, 'currentstatus') || "";
+                const saved = wardData[currentWard][id] || "";
+                return `
+                    <div class="lib-row" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;">
+                        <div style="font-size:0.8rem;">${id}</div>
+                        <div><strong>${desc}</strong><br><small>STATUS: ${status}</small></div>
+                        <div style="font-size:0.85rem;">${who}</div>
+                        <textarea class="comment-input" oninput="saveComment('${id}', this.value)">${saved}</textarea>
+                    </div>`;
+            }).join('');
+            body.innerHTML = `<div class="row-header" style="grid-template-columns: 0.5fr 2fr 1fr 1.5fr;"><div>ID</div><div>Task</div><div>Who</div><div>Notes</div></div>${rows}`;
         }
-    });
-
-    if (tableData.length === 0) {
-        alert("Please add notes before exporting.");
-        return;
+        switchView('view-content');
     }
-
- // 5. Table Generation (Optimized for full-page width)
-    doc.autoTable({
-        startY: 45,
-        head: [['Description', 'Category', 'Site Notes / Comments']],
-        body: tableData,
-        theme: 'striped',
-        headStyles: { fillColor: [30, 41, 59] },
-        styles: { 
-            fontSize: 10, 
-            cellPadding: 5, 
-            overflow: 'linebreak',
-            valign: 'top' 
-        },
-        columnStyles: { 
-            0: { cellWidth: 60 },  // Description: Plenty of room
-            1: { cellWidth: 35 },  // Category: Keeps it compact
-            2: { cellWidth: 'auto' } // Site Notes: Stretches to fill the rest of the 297mm
-        },
-        margin: { left: 14, right: 14 } // Ensures it uses the full width of the paper
-    });
-
-    doc.save(`Remediation_Brief_${currentWard}.pdf`);
-}
-</script>
+</script>  
 </body>
 </html>
