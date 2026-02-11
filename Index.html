@@ -148,7 +148,7 @@
         
         const reportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        // 1. CUSTOM HEADER LOGIC
+        // HEADERS
         let headerTitle = currentWard; 
         let subTitle = "Scope Builder Report";
         
@@ -160,7 +160,7 @@
             subTitle = "Operational Move Plan";
         }
 
-        // 2. BUTTONS (Red = PDF, Green = Add Task, Gray = Back)
+        // BUTTONS
         const navButtons = `
             <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
                 <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button>
@@ -168,7 +168,7 @@
                 ${type !== 'brief' ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Task</button>` : ''}
             </div>`;
 
-        // 3. PDF HEADER LAYOUT
+        // PDF HEADER
         const pdfHeader = `
             <div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end; padding-right:10px;">
                 <div>
@@ -178,7 +178,7 @@
                 <div style="font-size:0.8rem; color:#333; white-space:nowrap;"><strong>Date:</strong> ${reportDate}</div>
             </div>`;
 
-        // --- A. SCOPE BUILDER (PORTRAIT OPTIMIZED) ---
+        // --- A. SCOPE BUILDER ---
         if (type === 'brief') {
             document.getElementById('moduleTitle').innerText = "Scope Builder";
             body.innerHTML = navButtons + pdfHeader;
@@ -194,11 +194,11 @@
                     const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
                     
-                    // PORTRAIT GRID: 40% Description | 60% Notes (Removes center whitespace)
+                    // Added: oninput="autoResize(this)" and removed fixed height styles
                     return `
                         <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 40% 60%; gap:10px; padding:4px 0; border-bottom:1px solid #e2e8f0; align-items:start;">
                             <div style="font-size:0.8rem; line-height:1.3; padding-top:2px;">${desc}</div>
-                            <textarea class="comment-input" style="height:22px; min-height:22px; font-size:0.8rem; padding:4px; border:1px solid #cbd5e1; width:100%;" placeholder="Notes..." oninput="saveComment('${desc}', this.value)">${saved}</textarea>
+                            <textarea class="comment-input" style="height:24px; overflow-y:hidden; font-size:0.8rem; padding:4px; border:1px solid #cbd5e1; width:100%; resize:none;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
                         </div>`;
                 }).join('');
                 
@@ -210,14 +210,13 @@
             });
         } 
         
-        // --- B. TASK TRACKERS (LANDSCAPE) ---
+        // --- B. TASK TRACKERS ---
         else {
             const isEnabler = type === 'enablers';
             document.getElementById('moduleTitle').innerText = isEnabler ? "Enablers" : "Ward Moves";
             body.innerHTML = navButtons + pdfHeader;
 
             const sheetData = isEnabler ? db.enablers : db.moves;
-            // Filter: Ward Matches OR Default Task (Empty Ward)
             const tasks = sheetData.filter(t => {
                 const w = findVal(t, 'ward') || findVal(t, 'departmentalname');
                 return w === currentWard || !w;
@@ -227,13 +226,11 @@
                 const id = findVal(t, 'taskid') || "T";
                 const desc = findVal(t, 'taskdescription') || "";
                 
-                // Retrieve saved data or use defaults
                 const savedWho = (wardData[currentWard] && wardData[currentWard][id + '_who']) || findVal(t, 'whoresponsible') || "";
                 const savedDue = (wardData[currentWard] && wardData[currentWard][id + '_due']) || findVal(t, 'datedue') || "";
                 const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
                 const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || "";
 
-                // Traffic Light
                 let rowColor = "";
                 if (savedDue && savedStatus !== 'Complete') {
                     const diffDays = Math.ceil((new Date(savedDue) - new Date()) / (1000 * 60 * 60 * 24)); 
@@ -244,14 +241,15 @@
                 const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late']
                     .map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
 
+                // Added: oninput="autoResize(this)" and overflow-y:hidden
                 return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:center; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:30px;">
-                        <div style="font-size:0.75rem; color:#64748b;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2;">${desc}</div>
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:30px;">
+                        <div style="font-size:0.75rem; color:#64748b; padding-top:4px;">${id}</div>
+                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:4px;">${desc}</div>
                         <div><input type="text" value="${savedWho}" placeholder="Who..." oninput="saveComment('${id}_who', this.value)" style="border:1px solid #ddd; width:95%; font-size:0.75rem; padding:2px;"></div>
                         <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%;"></div>
                         <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="height:24px; min-height:24px; font-size:0.75rem; padding:2px; border:1px solid #cbd5e1;" oninput="saveComment('${id}', this.value)">${savedNotes}</textarea>
+                        <textarea class="comment-input" style="height:24px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:2px; border:1px solid #cbd5e1;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
                     </div>`;
             }).join('');
 
@@ -261,6 +259,11 @@
                 </div>
                 ${rows}`;
         }
+        
+        // --- NEW STEP: FORCE RESIZE ALL TEXTAREAS ON LOAD ---
+        // This ensures saved text expands the box immediately
+        document.querySelectorAll('textarea').forEach(el => autoResize(el));
+        
         switchView('view-content');
     }
 
@@ -326,10 +329,16 @@
     }
     
     function downloadPDF() {
-        // 1. PREPARE: Hide buttons
+        // 1. Hide buttons
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         
-        // 2. SCOPE FILTER: Hide empty rows for the Scope Builder
+        // 2. FORCE EXPAND ALL TEXTAREAS (Fixes text cut-off)
+        document.querySelectorAll('textarea').forEach(el => {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        });
+
+        // 3. SCOPE FILTER
         let hiddenElements = [];
         if (currentType === 'brief') {
             document.querySelectorAll('.lib-row').forEach(row => {
@@ -339,7 +348,6 @@
                     hiddenElements.push(row);
                 }
             });
-            // Hide empty categories
             document.querySelectorAll('.scope-category').forEach(cat => {
                 const visibleRows = Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none');
                 if (visibleRows.length === 0) {
@@ -351,9 +359,6 @@
 
         const element = document.getElementById('moduleBody');
         const title = document.getElementById('moduleTitle').innerText;
-        
-        // 3. ORIENTATION LOGIC
-        // Scope = Portrait (to save space), Tasks = Landscape (for columns)
         const orient = currentType === 'brief' ? 'portrait' : 'landscape';
 
         const opt = { 
@@ -366,11 +371,16 @@
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
-            // 4. RESTORE
+            // Restore
             document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
             hiddenElements.forEach(el => el.style.display = ''); 
         });
-    }   
+    }  
+function autoResize(el) {
+        el.style.height = 'auto'; // Reset height
+        el.style.height = el.scrollHeight + 'px'; // Set to full text height
+    }
+
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
