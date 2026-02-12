@@ -122,7 +122,7 @@
         </div>
     <script>
  // 1. DATABASE & CONFIG
-    let db = { library: [], depts: [], enablers: [], moves: [], risks: [] }; // Added risks array
+    let db = { library: [], depts: [], enablers: [], moves: [], risks: [] };
     let currentWard = "";
     let currentType = "";
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
@@ -145,7 +145,7 @@
                 db.depts = getSheet('baseline');
                 db.enablers = getSheet('enablers');
                 db.moves = getSheet('moves');
-                db.risks = getSheet('risk'); // Looks for 'Risk', 'Risks', or 'Risk Register'
+                db.risks = getSheet('risk'); 
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -230,11 +230,10 @@
             });
         }
         
-        // --- B. RISK REGISTER (THE MISSING LINK) ---
+        // --- B. RISK REGISTER (CALCULATED) ---
         else if (type === 'risks') {
             body.innerHTML = navButtons + pdfHeader;
             
-            // Filter: Matches Ward OR Global (No Ward)
             const tasks = db.risks.filter(t => {
                 const w = findVal(t, 'ward') || findVal(t, 'departmentalname');
                 return w === currentWard || !w;
@@ -244,38 +243,52 @@
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                 
-                // Load Saved Data OR Excel Defaults
-                const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "Low";
-                const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "Low";
+                // Get Saved Numbers (Default to 1)
+                const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
+                const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigationplan') || "";
 
-                // Traffic Light Logic (High Impact OR High Prob = Red)
-                let colorClass = "";
-                if (savedImp === 'High' || savedProb === 'High') colorClass = "background-color:#fee2e2;"; // Red
-                else if (savedImp === 'Medium' || savedProb === 'Medium') colorClass = "background-color:#fef9c3;"; // Amber
+                // CALCULATION LOGIC
+                const impVal = parseInt(savedImp) || 1;
+                const probVal = parseInt(savedProb) || 1;
+                const score = impVal * probVal;
 
-                const impOptions = ['Low', 'Medium', 'High'].map(opt => `<option value="${opt}" ${savedImp === opt ? 'selected' : ''}>${opt}</option>`).join('');
-                const probOptions = ['Low', 'Medium', 'High'].map(opt => `<option value="${opt}" ${savedProb === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                // Color Logic (Standard Matrix: >15 Red, >8 Amber)
+                let colorClass = "";
+                let scoreColor = "#64748b"; // Default grey
+                
+                if (score >= 15) { 
+                    colorClass = "background-color:#fee2e2;"; // Row Red
+                    scoreColor = "#ef4444"; // Text Red
+                } else if (score >= 8) { 
+                    colorClass = "background-color:#fef9c3;"; // Row Amber
+                    scoreColor = "#d97706"; // Text Orange
+                }
+
+                // Dropdown Generators (1-5)
+                const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
 
                 return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.5fr 2fr 0.8fr 0.8fr 2.5fr; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 0.6fr 0.6fr 0.6fr 2.5fr; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
                         <div style="font-size:0.8rem; font-weight:bold; padding-top:8px;">${desc}</div>
                         
-                        <div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px; font-weight:bold;">${impOptions}</select></div>
-                        <div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${probOptions}</select></div>
+                        <div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedImp)}</select></div>
+                        <div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedProb)}</select></div>
+                        
+                        <div style="font-size:1.1rem; font-weight:bold; color:${scoreColor}; padding-top:4px; text-align:center;">${score}</div>
                         
                         <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" placeholder="Mitigation Plan..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
                     </div>`;
             }).join('');
 
             body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.5fr 2fr 0.8fr 0.8fr 2.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>ID</div><div>Risk Description</div><div>Impact</div><div>Prob</div><div>Mitigation Plan</div>
+                <div class="row-header" style="grid-template-columns: 0.4fr 2fr 0.6fr 0.6fr 0.6fr 2.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
+                    <div>ID</div><div>Risk Description</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
                 </div>${rows}`;
         }
 
-        // --- C. TASK TRACKERS (Enablers & Moves) ---
+        // --- C. TASK TRACKERS ---
         else {
             body.innerHTML = navButtons + pdfHeader;
             const sheetData = type === 'enablers' ? db.enablers : db.moves;
@@ -314,12 +327,12 @@
         switchView('view-content');
     }
 
-    // 5. HELPERS (Modal, PDF, Resize, FindVal)
+    // 5. HELPERS
     function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
     
     function downloadPDF() {
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
-        // Magic Swap for PDF wrapping
+        // Magic Swap
         let swapList = [];
         document.querySelectorAll('textarea').forEach(el => {
             const div = document.createElement('div');
@@ -331,7 +344,7 @@
             swapList.push({ area: el, replacement: div });
         });
 
-        // Scope Filter (Hide Empty)
+        // Scope Filter
         let hiddenElements = [];
         if (currentType === 'brief') {
             document.querySelectorAll('.lib-row').forEach(row => {
@@ -362,26 +375,38 @@
         });
     }
 
-    function openModal() { document.getElementById('taskModal').style.display = 'flex'; }
+    // --- SMART MODAL LOGIC (Shows correct fields based on type) ---
+    function openModal() { 
+        document.getElementById('taskModal').style.display = 'flex'; 
+        
+        // Show/Hide fields based on current module
+        if (currentType === 'risks') {
+            document.getElementById('taskFields').style.display = 'none';
+            document.getElementById('riskFields').style.display = 'block';
+        } else {
+            document.getElementById('taskFields').style.display = 'block';
+            document.getElementById('riskFields').style.display = 'none';
+        }
+    }
+    
     function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
     
-    // UPDATED SAVE NEW TASK (Handles Risk creation too)
     function saveNewTask() {
         const desc = document.getElementById('mDesc').value;
         if (!desc) return alert("Enter description");
         const newId = "NEW-" + Math.floor(Math.random() * 999);
-
         let newTask = {};
 
         if (currentType === 'risks') {
-            // Risk Defaults
+            // Get numeric values from modal
+            const imp = document.getElementById('mImp').value;
+            const prob = document.getElementById('mProb').value;
             newTask = { 
                 "riskid": newId, "riskdescription": desc, "ward": currentWard,
-                "impact": "Medium", "prob": "Medium", "mitigationplan": ""
+                "impact": imp, "prob": prob, "mitigationplan": ""
             };
             db.risks.push(newTask);
         } else {
-            // Task Defaults
             const who = document.getElementById('mWho').value;
             const due = document.getElementById('mDue').value;
             const status = document.getElementById('mStatus').value;
@@ -487,28 +512,55 @@ function autoResize(el) {
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
-        <h2 style="margin-top:0;">Add New Task</h2>
+        <h2 id="modalTitle" style="margin-top:0;">Add New Item</h2>
         
-        <label style="display:block; margin-top:10px; font-weight:bold;">Task Description</label>
+        <label style="display:block; margin-top:10px; font-weight:bold;">Description</label>
         <input type="text" id="mDesc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
         
-        <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label>
-        <input type="text" id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-        
-        <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label>
-        <input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-        
-        <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
-        <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-            <option value="Not Started">Not Started</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Complete">Complete</option>
-            <option value="Late">Late</option>
-        </select>
+        <div id="taskFields">
+            <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label>
+            <input type="text" id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+            
+            <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label>
+            <input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+            
+            <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
+            <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                <option value="Not Started">Not Started</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Complete">Complete</option>
+                <option value="Late">Late</option>
+            </select>
+        </div>
+
+        <div id="riskFields" style="display:none;">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Impact (1-5)</label>
+                    <select id="mImp" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="1">1 - Negligible</option>
+                        <option value="2">2 - Minor</option>
+                        <option value="3">3 - Moderate</option>
+                        <option value="4">4 - Major</option>
+                        <option value="5">5 - Catastrophic</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Prob (1-5)</label>
+                    <select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="1">1 - Rare</option>
+                        <option value="2">2 - Unlikely</option>
+                        <option value="3">3 - Possible</option>
+                        <option value="4">4 - Likely</option>
+                        <option value="5">5 - Certain</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
         <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
             <button class="btn" onclick="closeModal()" style="background:#64748b;">Cancel</button>
-            <button class="btn" onclick="saveNewTask()" style="background:#10b981;">Save Task</button>
+            <button class="btn" onclick="saveNewTask()" style="background:#10b981;">Save</button>
         </div>
     </div>
 </div>
