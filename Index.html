@@ -207,7 +207,7 @@
             </div>`;
 
         const pdfHeader = `
-            <div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end; padding-right:10px;">
+            <div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end; padding-right:10px; page-break-inside:avoid;">
                 <div><h2 style="margin:0; font-size:1.4rem; color:#1e293b; font-weight:bold;">${headerTitle}</h2><span style="font-size:0.8rem; color:#64748b;">${subTitle}</span></div>
                 <div style="font-size:0.8rem; color:#333; white-space:nowrap;"><strong>Date:</strong> ${reportDate}</div>
             </div>`;
@@ -228,14 +228,14 @@
                     return `
                         <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 40% 60%; gap:10px; padding:4px 0; border-bottom:1px solid #e2e8f0; align-items:start;">
                             <div style="font-size:0.8rem; line-height:1.3; padding-top:6px;">${desc}</div>
-                            <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
+                            <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none; box-sizing:border-box;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea>
                         </div>`;
                 }).join('');
-                body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px;">${cat}</div>${rows}</div>`;
+                body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px; page-break-inside:avoid;">${cat}</div>${rows}</div>`;
             });
         }
         
-        // --- B. RISK REGISTER (WITH NEW 'TYPE' COLUMN) ---
+        // --- B. RISK REGISTER ---
         else if (type === 'risks') {
             body.innerHTML = navButtons + pdfHeader;
             
@@ -250,30 +250,23 @@
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                 
-                // Get Saved Data
                 const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
                 const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
                 const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigationplan') || "";
 
-                // Calculation Logic
                 const impVal = parseInt(savedImp) || 1;
                 const probVal = parseInt(savedProb) || 1;
                 const score = impVal * probVal;
 
-                // Color Logic
                 let colorClass = "";
                 let scoreColor = "#64748b"; 
                 if (score >= 15) { colorClass = "background-color:#fee2e2;"; scoreColor = "#ef4444"; } 
                 else if (score >= 8) { colorClass = "background-color:#fef9c3;"; scoreColor = "#d97706"; }
 
-                // UI Generators
                 const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
-                
-                // Custom Multi-Select Dropdown for Type
                 const ddHtml = riskTypes.map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer; color:#333;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
                 
-                // Adjusted Grid columns to fit 'Type' 
                 return `
                     <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
@@ -291,13 +284,14 @@
                         
                         <div style="font-size:0.8rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${score}</div>
                         
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" placeholder="Mitigation Plan..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Mitigation Plan..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
                     </div>`;
             }).join('');
 
+            // FIXED: Changed "Imp" to "Impact"
             body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>ID</div><div>Risk Description</div><div>Type</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
+                <div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;">
+                    <div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
                 </div>${rows}`;
         }
 
@@ -327,23 +321,22 @@
                     <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
                         <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
-                        <div><input type="text" value="${savedWho}" placeholder="Who..." oninput="saveComment('${id}_who', this.value)" style="border:1px solid #ddd; width:95%; font-size:0.75rem; padding:4px; margin-top:4px;"></div>
+                        <div><input type="text" value="${savedWho}" placeholder="Who..." oninput="saveComment('${id}_who', this.value)" style="border:1px solid #ddd; width:95%; font-size:0.75rem; padding:4px; margin-top:4px; box-sizing:border-box;"></div>
                         <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;"></div>
                         <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
                     </div>`;
             }).join('');
-            body.innerHTML += `<div class="row-header" style="grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div></div>${rows}`;
+            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
         setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100);
         switchView('view-content');
     }
 
-    // 5. HELPERS (Auto Resize, Magic Swap PDF, Modal)
+    // 5. HELPERS
     function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
     
-    // NEW: Smart Toggle for Checkbox Dropdown (Saves instantly without full page refresh)
     function toggleRiskType(id, typeStr, isChecked) {
         if (!wardData[currentWard]) wardData[currentWard] = {};
         let current = wardData[currentWard][id + '_type'];
@@ -362,16 +355,26 @@
         document.getElementById('label_' + id).innerText = newVal || "Select...";
     }
 
+    // --- PDF PRINT ENGINE (Fixed Whitespace & Page Breaks) ---
     function downloadPDF() {
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+        
         let swapList = [];
         document.querySelectorAll('textarea').forEach(el => {
             const div = document.createElement('div');
             div.innerText = el.value; 
-            div.style.width = '100%'; div.style.minHeight = el.style.height; 
-            div.style.fontSize = getComputedStyle(el).fontSize; div.style.padding = '5px'; 
-            div.style.border = '1px solid #ccc'; div.style.whiteSpace = 'pre-wrap'; div.style.fontFamily = 'sans-serif';
-            el.style.display = 'none'; el.parentNode.insertBefore(div, el);
+            div.style.width = '100%'; 
+            div.style.height = 'auto'; // Let it hug the text tightly
+            div.style.fontSize = getComputedStyle(el).fontSize; 
+            div.style.padding = '4px'; // Tightened padding to reduce whitespace
+            div.style.border = '1px solid #ccc'; 
+            div.style.whiteSpace = 'pre-wrap'; 
+            div.style.fontFamily = 'sans-serif';
+            div.style.lineHeight = '1.3';
+            div.style.boxSizing = 'border-box';
+            
+            el.style.display = 'none'; 
+            el.parentNode.insertBefore(div, el);
             swapList.push({ area: el, replacement: div });
         });
 
@@ -392,10 +395,15 @@
         const title = document.getElementById('moduleTitle').innerText;
         const orient = currentType === 'brief' ? 'portrait' : 'landscape';
 
+        // STRICT PAGE BREAK CONFIGURATION
         const opt = { 
-            margin: [0.3, 0.3, 0.3, 0.3], filename: `${currentWard}_${title}.pdf`, 
-            image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, 
-            jsPDF: { unit: 'in', format: 'a4', orientation: orient }, pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            margin: [0.4, 0.3, 0.4, 0.3], // Top, Left, Bottom, Right
+            filename: `${currentWard}_${title}.pdf`, 
+            image: { type: 'jpeg', quality: 1.0 }, 
+            html2canvas: { scale: 2, useCORS: true }, 
+            jsPDF: { unit: 'in', format: 'a4', orientation: orient }, 
+            // This 'avoid' array forces the printer to never cut these classes in half
+            pagebreak: { mode: ['css', 'legacy'], avoid: ['.lib-row', '.row-header', '.scope-category', '.report-header'] } 
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
@@ -427,8 +435,6 @@
         if (currentType === 'risks') {
             const imp = document.getElementById('mImp').value;
             const prob = document.getElementById('mProb').value;
-            
-            // Gather Selected Risk Types
             const typeCbs = document.querySelectorAll('.risk-type-cb:checked');
             const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
 
@@ -438,12 +444,9 @@
             };
             db.risks.push(newTask);
             
-            // Auto-save the new type to local storage so it displays instantly
             if (!wardData[currentWard]) wardData[currentWard] = {};
             wardData[currentWard][newId + '_type'] = selectedTypes;
             localStorage.setItem('wardData', JSON.stringify(wardData));
-            
-            // Uncheck the boxes for the next time the modal opens
             document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
 
         } else {
@@ -457,8 +460,6 @@
             if (currentType === 'enablers') db.enablers.push(newTask);
             else db.moves.push(newTask);
         }
-        
-        // Clear description field
         document.getElementById('mDesc').value = '';
         closeModal(); showModule(currentType);
     }
