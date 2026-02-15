@@ -149,7 +149,7 @@
                 db.moves = getSheet('moves');
                 db.programme = getSheet('programme') || getSheet('program'); 
                 db.risks = getSheet('risk'); 
-                db.directory = getSheet('directory') || getSheet('contacts') || []; // NEW Directory Sheet
+                db.directory = getSheet('directory') || getSheet('contacts') || []; 
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -182,13 +182,11 @@
 
     // --- HELPER: DIRECTORY DROPDOWN GENERATOR ---
     function getDirOptions(selected) {
-        // Collect names from excel + anything manually added during the session
         let names = db.directory.map(d => findVal(d, 'name') || findVal(d, 'contact')).filter(n => n);
-        // Add names from local storage directory items
         if (wardData['GLOBAL_DIR']) {
             Object.values(wardData['GLOBAL_DIR']).forEach(item => { if (item.name) names.push(item.name); });
         }
-        names = [...new Set(names)].sort(); // Deduplicate and alphabetize
+        names = [...new Set(names)].sort(); 
         
         let opts = `<option value="">Select...</option>`;
         if (selected && !names.includes(selected)) opts += `<option value="${selected}" selected>${selected}</option>`;
@@ -196,12 +194,35 @@
         return opts;
     }
 
-    // --- HELPER: END DATE CALCULATOR ---
-    function calcEndDate(startStr, durationDays) {
-        if (!startStr || !durationDays) return "";
+    // --- NEW HELPER: WORKING DAYS CALCULATOR ---
+    function calcEndObj(startStr, durationDays) {
+        if (!startStr || !durationDays) return null;
         let d = new Date(startStr);
-        d.setDate(d.getDate() + parseInt(durationDays)); // Adds calendar days
-        return d.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+        let days = parseInt(durationDays);
+        if (isNaN(days) || days <= 0) return null;
+        
+        // If starting on a weekend, automatically bump to Monday
+        if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sunday -> Monday
+        if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Saturday -> Monday
+
+        days -= 1; // A 1-day task finishes on its own start date
+        
+        while (days > 0) {
+            d.setDate(d.getDate() + 1);
+            if (d.getDay() !== 0 && d.getDay() !== 6) { // Skip 0 (Sun) and 6 (Sat)
+                days--;
+            }
+        }
+        return d;
+    }
+
+    // --- NEW HELPER: DD/MM/YYYY FORMATTER ---
+    function formatDateGB(dateObj) {
+        if (!dateObj) return "";
+        let dd = String(dateObj.getDate()).padStart(2, '0');
+        let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        let yyyy = dateObj.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
     }
 
     // 4. MODULE BUILDER
@@ -220,7 +241,7 @@
         else if (type === 'moves') { headerTitle += " Ward Move"; subTitle = "Move Plan"; }
         else if (type === 'programme') { headerTitle += " Programme"; subTitle = "Activities & Milestones"; }
         else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; }
-        else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; } // Global scope
+        else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; }
 
         const navButtons = `
             <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
@@ -238,7 +259,7 @@
         document.getElementById('moduleTitle').innerText = subTitle;
 
         // --- A. SCOPE BUILDER ---
-        if (type === 'brief') { /* ... Previous Scope logic unchanged ... */
+        if (type === 'brief') {
             body.innerHTML = navButtons + pdfHeader;
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
             const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
@@ -254,11 +275,9 @@
             });
         }
         
-        // --- B. PROJECT DIRECTORY (NEW) ---
+        // --- B. PROJECT DIRECTORY ---
         else if (type === 'directory') {
             body.innerHTML = navButtons + pdfHeader;
-            
-            // Collect Excel + Local Storage Directory Contacts
             let contacts = [...db.directory];
             if (wardData['GLOBAL_DIR']) {
                 Object.values(wardData['GLOBAL_DIR']).forEach(c => contacts.push(c));
@@ -286,7 +305,7 @@
         }
         
         // --- C. RISK REGISTER ---
-        else if (type === 'risks') { /* ... Previous Risk logic unchanged ... */
+        else if (type === 'risks') { 
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             const riskTypes = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'];
@@ -321,7 +340,7 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div></div>${rows}`;
         }
 
-        // --- D. PROGRAMME MODULE (CALCULATED DATES) ---
+        // --- D. PROGRAMME MODULE (WORKING DAYS + DD/MM/YYYY) ---
         else if (type === 'programme') {
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
@@ -330,22 +349,21 @@
                 const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
                 const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
                 
-                // Dropdown driven Who/Lead
                 const savedLead = (wardData[currentWard] && wardData[currentWard][id + '_lead']) || findVal(t, 'lead') || "";
-                
-                // Core Dates
                 const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
                 const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
                 const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started";
                 const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'notes') || "";
                 
-                // AUTO-CALC END DATE
-                const calcEnd = calcEndDate(savedStart, savedDur);
+                // NEW: Use the Working Days Engine
+                const endObj = calcEndObj(savedStart, savedDur);
+                // NEW: Format the result as DD/MM/YYYY
+                const displayEnd = formatDateGB(endObj);
 
-                // Traffic Light against CALCULATED END DATE
+                // Traffic Light
                 let rowColor = "";
-                if (calcEnd && savedStatus !== 'Complete') {
-                    const diffDays = Math.ceil((new Date(calcEnd) - new Date()) / (1000 * 60 * 60 * 24)); 
+                if (endObj && savedStatus !== 'Complete') {
+                    const diffDays = Math.ceil((endObj - new Date()) / (1000 * 60 * 60 * 24)); 
                     if (diffDays < 0) rowColor = "background-color: #fee2e2;"; 
                     else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; 
                 }
@@ -360,7 +378,8 @@
                         
                         <div><input type="date" value="${savedStart}" onchange="saveComment('${id}_start', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div>
                         <div><input type="number" value="${savedDur}" onchange="saveComment('${id}_dur', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;" placeholder="Days"></div>
-                        <div style="font-size:0.75rem; padding-top:8px; font-weight:bold; color:#475569;">${calcEnd || "-"}</div>
+                        
+                        <div style="font-size:0.75rem; padding-top:8px; font-weight:bold; color:#475569;">${displayEnd || "-"}</div>
                         
                         <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
                         <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
@@ -396,9 +415,7 @@
                     <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
                         <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
-                        
                         <div><select onchange="saveComment('${id}_who', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(savedWho)}</select></div>
-                        
                         <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;"></div>
                         <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
                         <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
@@ -416,8 +433,7 @@
     function saveComment(id, val) { wardData[currentWard][id] = val; localStorage.setItem('wardData', JSON.stringify(wardData)); }
     function saveDirComment(name, val) { 
         if (!wardData['GLOBAL_DIR_NOTES']) wardData['GLOBAL_DIR_NOTES'] = {};
-        wardData['GLOBAL_DIR_NOTES'][name] = val; 
-        localStorage.setItem('wardData', JSON.stringify(wardData)); 
+        wardData['GLOBAL_DIR_NOTES'][name] = val; localStorage.setItem('wardData', JSON.stringify(wardData)); 
     }
     
     function toggleRiskType(id, typeStr, isChecked) {
@@ -466,11 +482,8 @@
         });
     }
 
-    // --- SMART MODAL LOGIC FOR 4 MODULE TYPES ---
     function openModal() { 
         document.getElementById('taskModal').style.display = 'flex'; 
-        
-        // Hide everything first
         document.getElementById('standardDescField').style.display = 'none';
         document.getElementById('taskFields').style.display = 'none';
         document.getElementById('progFields').style.display = 'none';
@@ -478,19 +491,14 @@
         document.getElementById('dirFields').style.display = 'none';
 
         if (currentType === 'risks') {
-            document.getElementById('standardDescField').style.display = 'block';
-            document.getElementById('riskFields').style.display = 'block';
+            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('riskFields').style.display = 'block';
         } else if (currentType === 'programme') {
-            document.getElementById('standardDescField').style.display = 'block';
-            document.getElementById('progFields').style.display = 'block';
-            // Populate Leads
+            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('progFields').style.display = 'block';
             document.getElementById('mLead').innerHTML = getDirOptions('');
         } else if (currentType === 'directory') {
-            document.getElementById('dirFields').style.display = 'block'; // No standard desc field needed
+            document.getElementById('dirFields').style.display = 'block';
         } else {
-            document.getElementById('standardDescField').style.display = 'block';
-            document.getElementById('taskFields').style.display = 'block';
-            // Populate Who
+            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('taskFields').style.display = 'block';
             document.getElementById('mWho').innerHTML = getDirOptions('');
         }
     }
@@ -499,20 +507,13 @@
     
     function saveNewTask() {
         if (currentType === 'directory') {
-            const name = document.getElementById('mDirName').value;
-            const email = document.getElementById('mDirEmail').value;
-            const role = document.getElementById('mDirRole').value;
+            const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
             if (!name) return alert("Enter a name");
-            
             if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
-            // Use time-stamp as unique ID to allow multiple local additions safely
             wardData['GLOBAL_DIR'][Date.now()] = { name: name, email: email, role: role };
             localStorage.setItem('wardData', JSON.stringify(wardData));
-            
-            // Clear inputs
             document.getElementById('mDirName').value = ''; document.getElementById('mDirEmail').value = ''; document.getElementById('mDirRole').value = '';
-            closeModal(); showModule(currentType);
-            return;
+            closeModal(); showModule(currentType); return;
         }
 
         const desc = document.getElementById('mDesc').value;
@@ -522,34 +523,25 @@
 
         if (currentType === 'risks') {
             const imp = document.getElementById('mImp').value; const prob = document.getElementById('mProb').value;
-            const typeCbs = document.querySelectorAll('.risk-type-cb:checked');
-            const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
+            const typeCbs = document.querySelectorAll('.risk-type-cb:checked'); const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
             newTask = { "riskid": newId, "riskdescription": desc, "ward": currentWard, "type": selectedTypes, "impact": imp, "prob": prob, "mitigatingaction/s": "" };
             db.risks.push(newTask);
-            
             if (!wardData[currentWard]) wardData[currentWard] = {}; wardData[currentWard][newId + '_type'] = selectedTypes;
             localStorage.setItem('wardData', JSON.stringify(wardData));
             document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
 
         } else if (currentType === 'programme') {
-            const lead = document.getElementById('mLead').value;
-            const start = document.getElementById('mStart').value;
-            const dur = document.getElementById('mDur').value;
-            
+            const lead = document.getElementById('mLead').value; const start = document.getElementById('mStart').value; const dur = document.getElementById('mDur').value;
             newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": lead, "startdate": start, "duration": dur, "status": "Not Started" };
             db.programme.push(newTask);
 
         } else {
-            const who = document.getElementById('mWho').value;
-            const due = document.getElementById('mDue').value;
-            const status = document.getElementById('mStatus').value;
+            const who = document.getElementById('mWho').value; const due = document.getElementById('mDue').value; const status = document.getElementById('mStatus').value;
             newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": who, "datedue": due, "currentstatus": status };
             if (currentType === 'enablers') db.enablers.push(newTask);
             else db.moves.push(newTask);
         }
-        
-        document.getElementById('mDesc').value = '';
-        closeModal(); showModule(currentType);
+        document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
     }
 
     function findVal(obj, key) {
@@ -560,8 +552,7 @@
 
     // --- SYSTEM: BACKUP & RESTORE ---
     function downloadData() {
-        const dataStr = JSON.stringify(wardData);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+        const dataStr = JSON.stringify(wardData); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
         const exportName = `Project_Backup_${new Date().toISOString().slice(0,10)}.json`;
         const linkElement = document.createElement('a'); linkElement.setAttribute('href', dataUri); linkElement.setAttribute('download', exportName); linkElement.click();
     }
