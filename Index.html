@@ -238,7 +238,6 @@
         else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; }
         else if (type === 'reports') { headerTitle += " Monthly Report"; subTitle = "Executive Overview"; }
 
-        // Hide the "Add New Item" button specifically for the Brief and Reports modules
         const showAddBtn = (type !== 'brief' && type !== 'reports');
         const navButtons = `
             <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
@@ -255,7 +254,6 @@
 
         document.getElementById('moduleTitle').innerText = subTitle;
 
-        // --- A. SCOPE BUILDER ---
         if (type === 'brief') {
             body.innerHTML = navButtons + pdfHeader;
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
@@ -270,8 +268,6 @@
                 body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px; page-break-inside:avoid;">${cat}</div>${rows}</div>`;
             });
         }
-        
-        // --- B. PROJECT DIRECTORY ---
         else if (type === 'directory') {
             body.innerHTML = navButtons + pdfHeader;
             let contacts = [...db.directory];
@@ -285,8 +281,6 @@
             }).join('');
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div></div>${rows}`;
         }
-        
-        // --- C. RISK REGISTER ---
         else if (type === 'risks') { 
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
@@ -308,8 +302,6 @@
             }).join('');
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div></div>${rows}`;
         }
-        
-        // --- D. PROGRAMME MODULE ---
         else if (type === 'programme') {
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
@@ -348,11 +340,11 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
-        // --- E. REPORTS MODULE (NEW: Overview & Top Risks) ---
+        // --- E. REPORTS MODULE (NOW WITH GRAPHICAL TIMELINE) ---
         else if (type === 'reports') {
             body.innerHTML = navButtons + pdfHeader;
             
-            // 1. Progress Status Update
+            // 1. Progress Status
             const savedProgress = (wardData[currentWard] && wardData[currentWard]['report_progress']) || "";
             let html = `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
@@ -368,14 +360,79 @@
                     <textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter programme status, delays, and upcoming milestones here..." oninput="autoResize(this); saveComment('report_programme', this.value)">${savedProgReport}</textarea>
                 </div>`;
 
-            // 3. Auto-Calculated Top 3 Risks
+            // 3. GRAPHICAL PROGRAMME TIMELINE
+            const progTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+            
             html += `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Top 3 Project Risks</h3>`;
+                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Programme Timeline</h3>`;
+
+            let validTasks = progTasks.map(t => {
+                const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
+                const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
+                const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
+                const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
+                const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started";
+                
+                const startObj = savedStart ? new Date(savedStart) : null;
+                const endObj = calcEndObj(savedStart, savedDur);
+                return { desc, startObj, endObj, savedStatus };
+            }).filter(t => t.startObj && t.endObj);
+
+            if (validTasks.length === 0) {
+                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">Add Start Dates and Durations in the Programme module to generate timeline.</p>`;
+            } else {
+                const minDate = new Date(Math.min(...validTasks.map(t => t.startObj)));
+                const maxDate = new Date(Math.max(...validTasks.map(t => t.endObj)));
+                let totalSpan = (maxDate - minDate) / (1000 * 60 * 60 * 24);
+                if (totalSpan <= 0) totalSpan = 1;
+
+                let barsHtml = validTasks.map(t => {
+                    let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
+                    let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
+                    
+                    if (width < 2) width = 2; // Ensure 1-day tasks are visible
+                    if (left + width > 100) width = 100 - left;
+                    
+                    let barColor = "#94a3b8"; // Not Started (Gray)
+                    if (t.savedStatus === 'Complete') barColor = "#10b981"; // Green
+                    if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; // Blue
+                    if (t.savedStatus === 'Late') barColor = "#ef4444"; // Red
+
+                    return `
+                        <div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;">
+                            <div style="width:35%; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold; color:#334155;" title="${t.desc}">${t.desc}</div>
+                            <div style="width:65%; position:relative; background:#f1f5f9; height:18px; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <div style="position:absolute; left:${left}%; width:${width}%; background:${barColor}; height:100%; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+                            </div>
+                        </div>`;
+                }).join('');
+                
+                html += `
+                    <div style="border:1px solid #e2e8f0; padding:15px; border-radius:4px; background:white;">
+                        <div style="display:flex; margin-bottom:12px; font-size:0.7rem; color:#64748b; font-weight:bold;">
+                            <div style="width:35%;">Activity</div>
+                            <div style="width:65%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
+                                <span>${formatDateGB(minDate)}</span>
+                                <span>${formatDateGB(maxDate)}</span>
+                            </div>
+                        </div>
+                        ${barsHtml}
+                        <div style="margin-top:15px; display:flex; gap:15px; font-size:0.7rem; color:#64748b; justify-content:center;">
+                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#10b981; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Complete</span>
+                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#3b82f6; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> In Progress</span>
+                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#ef4444; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Late</span>
+                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#94a3b8; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Not Started</span>
+                        </div>
+                    </div></div>`;
+            }
+
+            // 4. Auto-Calculated Top 3 Risks
+            html += `
+                <div style="margin-bottom:25px; page-break-inside:avoid;">
+                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Top 3 Project Risks</h3>`;
             
             const wardRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-            
-            // Generate scores behind the scenes to rank them
             let scoredRisks = wardRisks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
@@ -386,7 +443,6 @@
                 return { id, desc, score, savedMit };
             });
 
-            // Sort highest to lowest score, grab the top 3
             scoredRisks.sort((a, b) => b.score - a.score);
             const top3 = scoredRisks.slice(0, 3);
 
@@ -395,8 +451,8 @@
             } else {
                 let riskRows = top3.map(r => {
                     let colorClass = ""; let scoreColor = "#64748b"; 
-                    if (r.score >= 15) { colorClass = "background-color:#fee2e2;"; scoreColor = "#ef4444"; } 
-                    else if (r.score >= 8) { colorClass = "background-color:#fef9c3;"; scoreColor = "#d97706"; }
+                    if (r.score >= 15) { colorClass = "background-color:#fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#ef4444"; } 
+                    else if (r.score >= 8) { colorClass = "background-color:#fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#d97706"; }
 
                     return `
                         <div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;">
@@ -408,7 +464,7 @@
                 }).join('');
 
                 html += `
-                    <div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid;">
+                    <div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                         <div>ID</div><div>Risk Description</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div>
                     </div>${riskRows}`;
             }
@@ -474,7 +530,7 @@
         document.getElementById('label_' + id).innerText = newVal || "Select...";
     }
 
-    // --- UPGRADED PDF ENGINE (Sets Reports to Portrait) ---
+    // --- UPGRADED PDF ENGINE ---
     function downloadPDF() {
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         
@@ -533,7 +589,6 @@
         const element = document.getElementById('moduleBody');
         const title = document.getElementById('moduleTitle').innerText;
         
-        // NEW: Reports print in Portrait mode, tracking tables print in Landscape
         const orient = (currentType === 'brief' || currentType === 'reports') ? 'portrait' : 'landscape';
         
         const opt = { 
