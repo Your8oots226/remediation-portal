@@ -180,43 +180,34 @@
         }).join('');
     }
 
-    // --- HELPER: DIRECTORY DROPDOWN GENERATOR ---
+    // --- HELPERS ---
     function getDirOptions(selected) {
         let names = db.directory.map(d => findVal(d, 'name') || findVal(d, 'contact')).filter(n => n);
         if (wardData['GLOBAL_DIR']) {
             Object.values(wardData['GLOBAL_DIR']).forEach(item => { if (item.name) names.push(item.name); });
         }
         names = [...new Set(names)].sort(); 
-        
         let opts = `<option value="">Select...</option>`;
         if (selected && !names.includes(selected)) opts += `<option value="${selected}" selected>${selected}</option>`;
         names.forEach(n => { opts += `<option value="${n}" ${n === selected ? 'selected' : ''}>${n}</option>`; });
         return opts;
     }
 
-    // --- NEW HELPER: WORKING DAYS CALCULATOR ---
     function calcEndObj(startStr, durationDays) {
         if (!startStr || !durationDays) return null;
         let d = new Date(startStr);
         let days = parseInt(durationDays);
         if (isNaN(days) || days <= 0) return null;
-        
-        // If starting on a weekend, automatically bump to Monday
-        if (d.getDay() === 0) d.setDate(d.getDate() + 1); // Sunday -> Monday
-        if (d.getDay() === 6) d.setDate(d.getDate() + 2); // Saturday -> Monday
-
-        days -= 1; // A 1-day task finishes on its own start date
-        
+        if (d.getDay() === 0) d.setDate(d.getDate() + 1); 
+        if (d.getDay() === 6) d.setDate(d.getDate() + 2); 
+        days -= 1; 
         while (days > 0) {
             d.setDate(d.getDate() + 1);
-            if (d.getDay() !== 0 && d.getDay() !== 6) { // Skip 0 (Sun) and 6 (Sat)
-                days--;
-            }
+            if (d.getDay() !== 0 && d.getDay() !== 6) days--;
         }
         return d;
     }
 
-    // --- NEW HELPER: DD/MM/YYYY FORMATTER ---
     function formatDateGB(dateObj) {
         if (!dateObj) return "";
         let dd = String(dateObj.getDate()).padStart(2, '0');
@@ -258,12 +249,10 @@
 
         document.getElementById('moduleTitle').innerText = subTitle;
 
-        // --- A. SCOPE BUILDER ---
         if (type === 'brief') {
             body.innerHTML = navButtons + pdfHeader;
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
             const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
-
             cats.forEach(cat => {
                 const items = db.library.filter(i => getCat(i) === cat);
                 let rows = items.map(i => {
@@ -274,42 +263,23 @@
                 body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px; page-break-inside:avoid;">${cat}</div>${rows}</div>`;
             });
         }
-        
-        // --- B. PROJECT DIRECTORY ---
         else if (type === 'directory') {
             body.innerHTML = navButtons + pdfHeader;
             let contacts = [...db.directory];
-            if (wardData['GLOBAL_DIR']) {
-                Object.values(wardData['GLOBAL_DIR']).forEach(c => contacts.push(c));
-            }
-
+            if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(c => contacts.push(c));
             let rows = contacts.map((c, index) => {
                 const name = findVal(c, 'name') || findVal(c, 'contact') || c.name || "Unknown";
                 const email = findVal(c, 'email') || c.email || "";
                 const role = findVal(c, 'role') || findVal(c, 'company') || c.role || "";
                 const savedNotes = (wardData['GLOBAL_DIR_NOTES'] && wardData['GLOBAL_DIR_NOTES'][name]) || "";
-
-                return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid #e2e8f0;">
-                        <div style="font-size:0.85rem; font-weight:bold;">${name}</div>
-                        <div style="font-size:0.8rem;"><a href="mailto:${email}" style="color:#3b82f6; text-decoration:none;">${email}</a></div>
-                        <div style="font-size:0.8rem; color:#64748b;">${role}</div>
-                        <textarea class="comment-input" style="min-height:28px; height:28px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:4px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Notes..." oninput="autoResize(this); saveDirComment('${name}', this.value)">${savedNotes}</textarea>
-                    </div>`;
+                return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid #e2e8f0;"><div style="font-size:0.85rem; font-weight:bold;">${name}</div><div style="font-size:0.8rem;"><a href="mailto:${email}" style="color:#3b82f6; text-decoration:none;">${email}</a></div><div style="font-size:0.8rem; color:#64748b;">${role}</div><textarea class="comment-input" style="min-height:28px; height:28px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:4px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Notes..." oninput="autoResize(this); saveDirComment('${name}', this.value)">${savedNotes}</textarea></div>`;
             }).join('');
-
-            body.innerHTML += `
-                <div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div>
-                </div>${rows}`;
+            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div></div>${rows}`;
         }
-        
-        // --- C. RISK REGISTER ---
         else if (type === 'risks') { 
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             const riskTypes = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'];
-
             let rows = tasks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
@@ -318,252 +288,10 @@
                 const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
                 const score = (parseInt(savedImp) || 1) * (parseInt(savedProb) || 1);
-
                 let colorClass = ""; let scoreColor = "#64748b"; 
                 if (score >= 15) { colorClass = "background-color:#fee2e2;"; scoreColor = "#ef4444"; } 
                 else if (score >= 8) { colorClass = "background-color:#fef9c3;"; scoreColor = "#d97706"; }
-
-                const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
-                const ddHtml = riskTypes.map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
-                
-                return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
-                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:bold; padding-top:8px;">${desc}</div>
-                        <div style="position:relative; margin-top:4px;"><div id="label_${id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #ccc; background:white; font-size:0.75rem; padding:4px; border-radius:4px; cursor:pointer; min-height:26px;">${savedType || "Select..."}</div><div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; z-index:50; padding:4px;" onmouseleave="this.style.display='none'">${ddHtml}</div></div>
-                        <div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedImp)}</select></div>
-                        <div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedProb)}</select></div>
-                        <div style="font-size:0.8rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${score}</div>
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
-                    </div>`;
-            }).join('');
-            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div></div>${rows}`;
-        }
-
-        // --- D. PROGRAMME MODULE (WORKING DAYS + DD/MM/YYYY) ---
-        else if (type === 'programme') {
-            body.innerHTML = navButtons + pdfHeader;
-            const tasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-
-            let rows = tasks.map(t => {
-                const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
-                const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
-                
-                const savedLead = (wardData[currentWard] && wardData[currentWard][id + '_lead']) || findVal(t, 'lead') || "";
-                const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
-                const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
-                const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started";
-                const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'notes') || "";
-                
-                // NEW: Use the Working Days Engine
-                const endObj = calcEndObj(savedStart, savedDur);
-                // NEW: Format the result as DD/MM/YYYY
-                const displayEnd = formatDateGB(endObj);
-
-                // Traffic Light
-                let rowColor = "";
-                if (endObj && savedStatus !== 'Complete') {
-                    const diffDays = Math.ceil((endObj - new Date()) / (1000 * 60 * 60 * 24)); 
-                    if (diffDays < 0) rowColor = "background-color: #fee2e2;"; 
-                    else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; 
-                }
-                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late'].map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
-
-                return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
-                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
-                        
-                        <div><select onchange="saveComment('${id}_lead', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(savedLead)}</select></div>
-                        
-                        <div><input type="date" value="${savedStart}" onchange="saveComment('${id}_start', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div>
-                        <div><input type="number" value="${savedDur}" onchange="saveComment('${id}_dur', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;" placeholder="Days"></div>
-                        
-                        <div style="font-size:0.75rem; padding-top:8px; font-weight:bold; color:#475569;">${displayEnd || "-"}</div>
-                        
-                        <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
-                    </div>`;
-            }).join('');
-            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
-        }
-
-        // --- E. TASK TRACKERS (Enablers & Moves) ---
-        else {
-            body.innerHTML = navButtons + pdfHeader;
-            const sheetData = type === 'enablers' ? db.enablers : db.moves;
-            const tasks = sheetData.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-
-            let rows = tasks.map(t => {
-                const id = findVal(t, 'taskid') || "T";
-                const desc = findVal(t, 'taskdescription') || "";
-                
-                const savedWho = (wardData[currentWard] && wardData[currentWard][id + '_who']) || findVal(t, 'whoresponsible') || "";
-                const savedDue = (wardData[currentWard] && wardData[currentWard][id + '_due']) || findVal(t, 'datedue') || "";
-                const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
-                const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || "";
-
-                let rowColor = "";
-                if (savedDue && savedStatus !== 'Complete') {
-                    const diffDays = Math.ceil((new Date(savedDue) - new Date()) / (1000 * 60 * 60 * 24)); 
-                    if (diffDays < 0) rowColor = "background-color: #fee2e2;"; 
-                    else if (diffDays <= 7) rowColor = "background-color: #fef9c3;"; 
-                }
-                const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late'].map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
-
-                return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
-                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
-                        <div><select onchange="saveComment('${id}_who', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(savedWho)}</select></div>
-                        <div><input type="date" value="${savedDue}" onchange="saveComment('${id}_due', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;"></div>
-                        <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
-                    </div>`;
-            }).join('');
-            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Task</div><div>Who</div><div>Due</div><div>Status</div><div>Notes</div></div>${rows}`;
-        }
-        
-        setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100);
-        switchView('view-content');
-    }
-
-    // 5. HELPERS
-    function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-    function saveComment(id, val) { wardData[currentWard][id] = val; localStorage.setItem('wardData', JSON.stringify(wardData)); }
-    function saveDirComment(name, val) { 
-        if (!wardData['GLOBAL_DIR_NOTES']) wardData['GLOBAL_DIR_NOTES'] = {};
-        wardData['GLOBAL_DIR_NOTES'][name] = val; localStorage.setItem('wardData', JSON.stringify(wardData)); 
-    }
-    
-    function toggleRiskType(id, typeStr, isChecked) {
-        if (!wardData[currentWard]) wardData[currentWard] = {};
-        let current = wardData[currentWard][id + '_type'];
-        if (current === undefined) { const task = db.risks.find(t => (findVal(t, 'riskid') || findVal(t, 'id')) === id); current = task ? (findVal(task, 'type') || "") : ""; }
-        let arr = current ? current.split(', ') : [];
-        if (isChecked && !arr.includes(typeStr)) arr.push(typeStr);
-        if (!isChecked) arr = arr.filter(x => x !== typeStr);
-        let newVal = arr.join(', ');
-        wardData[currentWard][id + '_type'] = newVal; localStorage.setItem('wardData', JSON.stringify(wardData));
-        document.getElementById('label_' + id).innerText = newVal || "Select...";
-    }
-
-    function downloadPDF() {
-        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
-        let swapList = [];
-        document.querySelectorAll('textarea').forEach(el => {
-            const div = document.createElement('div');
-            div.innerText = el.value; div.style.width = '100%'; div.style.height = 'auto'; div.style.fontSize = getComputedStyle(el).fontSize; 
-            div.style.padding = '4px'; div.style.border = '1px solid #ccc'; div.style.whiteSpace = 'pre-wrap'; 
-            div.style.fontFamily = 'sans-serif'; div.style.lineHeight = '1.3'; div.style.boxSizing = 'border-box';
-            el.style.display = 'none'; el.parentNode.insertBefore(div, el); swapList.push({ area: el, replacement: div });
-        });
-        let hiddenElements = [];
-        if (currentType === 'brief') {
-            document.querySelectorAll('.lib-row').forEach(row => {
-                const div = row.querySelector('div[style*="pre-wrap"]'); 
-                if (!div || !div.innerText.trim()) { row.style.display = 'none'; hiddenElements.push(row); }
-            });
-            document.querySelectorAll('.scope-category').forEach(cat => {
-                if (Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none').length === 0) { cat.style.display = 'none'; hiddenElements.push(cat); }
-            });
-        }
-        const element = document.getElementById('moduleBody');
-        const title = document.getElementById('moduleTitle').innerText;
-        const orient = currentType === 'brief' ? 'portrait' : 'landscape';
-        const opt = { 
-            margin: [0.4, 0.3, 0.4, 0.3], filename: `${currentWard}_${title}.pdf`, image: { type: 'jpeg', quality: 1.0 }, 
-            html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: orient }, 
-            pagebreak: { mode: ['css', 'legacy'], avoid: ['.lib-row', '.row-header', '.scope-category', '.report-header'] } 
-        };
-        html2pdf().set(opt).from(element).save().then(() => {
-            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
-            hiddenElements.forEach(el => el.style.display = ''); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; });
-        });
-    }
-
-    function openModal() { 
-        document.getElementById('taskModal').style.display = 'flex'; 
-        document.getElementById('standardDescField').style.display = 'none';
-        document.getElementById('taskFields').style.display = 'none';
-        document.getElementById('progFields').style.display = 'none';
-        document.getElementById('riskFields').style.display = 'none';
-        document.getElementById('dirFields').style.display = 'none';
-
-        if (currentType === 'risks') {
-            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('riskFields').style.display = 'block';
-        } else if (currentType === 'programme') {
-            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('progFields').style.display = 'block';
-            document.getElementById('mLead').innerHTML = getDirOptions('');
-        } else if (currentType === 'directory') {
-            document.getElementById('dirFields').style.display = 'block';
-        } else {
-            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('taskFields').style.display = 'block';
-            document.getElementById('mWho').innerHTML = getDirOptions('');
-        }
-    }
-    
-    function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
-    
-    function saveNewTask() {
-        if (currentType === 'directory') {
-            const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
-            if (!name) return alert("Enter a name");
-            if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
-            wardData['GLOBAL_DIR'][Date.now()] = { name: name, email: email, role: role };
-            localStorage.setItem('wardData', JSON.stringify(wardData));
-            document.getElementById('mDirName').value = ''; document.getElementById('mDirEmail').value = ''; document.getElementById('mDirRole').value = '';
-            closeModal(); showModule(currentType); return;
-        }
-
-        const desc = document.getElementById('mDesc').value;
-        if (!desc) return alert("Enter description");
-        const newId = "NEW-" + Math.floor(Math.random() * 999);
-        let newTask = {};
-
-        if (currentType === 'risks') {
-            const imp = document.getElementById('mImp').value; const prob = document.getElementById('mProb').value;
-            const typeCbs = document.querySelectorAll('.risk-type-cb:checked'); const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
-            newTask = { "riskid": newId, "riskdescription": desc, "ward": currentWard, "type": selectedTypes, "impact": imp, "prob": prob, "mitigatingaction/s": "" };
-            db.risks.push(newTask);
-            if (!wardData[currentWard]) wardData[currentWard] = {}; wardData[currentWard][newId + '_type'] = selectedTypes;
-            localStorage.setItem('wardData', JSON.stringify(wardData));
-            document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
-
-        } else if (currentType === 'programme') {
-            const lead = document.getElementById('mLead').value; const start = document.getElementById('mStart').value; const dur = document.getElementById('mDur').value;
-            newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": lead, "startdate": start, "duration": dur, "status": "Not Started" };
-            db.programme.push(newTask);
-
-        } else {
-            const who = document.getElementById('mWho').value; const due = document.getElementById('mDue').value; const status = document.getElementById('mStatus').value;
-            newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": who, "datedue": due, "currentstatus": status };
-            if (currentType === 'enablers') db.enablers.push(newTask);
-            else db.moves.push(newTask);
-        }
-        document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
-    }
-
-    function findVal(obj, key) {
-        if (!obj) return "";
-        const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
-        return k ? obj[k] : "";
-    }
-
-    // --- SYSTEM: BACKUP & RESTORE ---
-    function downloadData() {
-        const dataStr = JSON.stringify(wardData); const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-        const exportName = `Project_Backup_${new Date().toISOString().slice(0,10)}.json`;
-        const linkElement = document.createElement('a'); linkElement.setAttribute('href', dataUri); linkElement.setAttribute('download', exportName); linkElement.click();
-    }
-    function uploadData(event) {
-        const file = event.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try { wardData = JSON.parse(e.target.result); localStorage.setItem('wardData', JSON.stringify(wardData)); alert("Project loaded successfully!"); location.reload(); } 
-            catch (err) { alert("Error loading file. Make sure it is a valid .json backup."); }
-        }; reader.readAsText(file);
-    }
+                const makeOpts
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
