@@ -128,7 +128,7 @@
             <div id="moduleBody" style="margin-top:20px;"></div>
         </div>
     <script>
- // 1. DATABASE & CONFIG
+// 1. DATABASE & CONFIG
     let db = { library: [], depts: [], enablers: [], moves: [], risks: [] };
     let currentWard = "";
     let currentType = "";
@@ -191,7 +191,6 @@
         
         const reportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        // HEADERS
         let headerTitle = currentWard; 
         let subTitle = "";
         
@@ -200,7 +199,6 @@
         else if (type === 'moves') { headerTitle += " Ward Move"; subTitle = "Move Plan"; }
         else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; }
 
-        // BUTTONS
         const navButtons = `
             <div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px;">
                 <button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button>
@@ -237,7 +235,7 @@
             });
         }
         
-        // --- B. RISK REGISTER (Score Font Size Fixed) ---
+        // --- B. RISK REGISTER (WITH NEW 'TYPE' COLUMN) ---
         else if (type === 'risks') {
             body.innerHTML = navButtons + pdfHeader;
             
@@ -246,37 +244,48 @@
                 return w === currentWard || !w;
             });
 
+            const riskTypes = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'];
+
             let rows = tasks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                 
+                // Get Saved Data
+                const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
                 const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
                 const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigationplan') || "";
 
+                // Calculation Logic
                 const impVal = parseInt(savedImp) || 1;
                 const probVal = parseInt(savedProb) || 1;
                 const score = impVal * probVal;
 
+                // Color Logic
                 let colorClass = "";
                 let scoreColor = "#64748b"; 
-                
-                if (score >= 15) { 
-                    colorClass = "background-color:#fee2e2;"; 
-                    scoreColor = "#ef4444"; 
-                } else if (score >= 8) { 
-                    colorClass = "background-color:#fef9c3;"; 
-                    scoreColor = "#d97706"; 
-                }
+                if (score >= 15) { colorClass = "background-color:#fee2e2;"; scoreColor = "#ef4444"; } 
+                else if (score >= 8) { colorClass = "background-color:#fef9c3;"; scoreColor = "#d97706"; }
 
+                // UI Generators
                 const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
-
-                // FIXED: Score font-size changed from 1.1rem to 0.8rem
+                
+                // Custom Multi-Select Dropdown for Type
+                const ddHtml = riskTypes.map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer; color:#333;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
+                
+                // Adjusted Grid columns to fit 'Type' 
                 return `
-                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 0.6fr 0.6fr 0.6fr 2.5fr; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
                         <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
-                        <div style="font-size:0.8rem; font-weight:bold; padding-top:8px;">${desc}</div>
+                        <div style="font-size:0.8rem; font-weight:bold; padding-top:8px; padding-right:5px;">${desc}</div>
                         
+                        <div style="position:relative; margin-top:4px;">
+                            <div id="label_${id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #ccc; background:white; font-size:0.75rem; padding:4px; border-radius:4px; cursor:pointer; min-height:26px;">${savedType || "Select..."}</div>
+                            <div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; z-index:50; box-shadow:0 4px 6px rgba(0,0,0,0.1); padding:4px;" onmouseleave="this.style.display='none'">
+                                ${ddHtml}
+                            </div>
+                        </div>
+
                         <div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedImp)}</select></div>
                         <div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedProb)}</select></div>
                         
@@ -287,8 +296,8 @@
             }).join('');
 
             body.innerHTML += `
-                <div class="row-header" style="grid-template-columns: 0.4fr 2fr 0.6fr 0.6fr 0.6fr 2.5fr; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>ID</div><div>Risk Description</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
+                <div class="row-header" style="grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;">
+                    <div>ID</div><div>Risk Description</div><div>Type</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
                 </div>${rows}`;
         }
 
@@ -331,9 +340,28 @@
         switchView('view-content');
     }
 
-    // 5. HELPERS
+    // 5. HELPERS (Auto Resize, Magic Swap PDF, Modal)
     function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
     
+    // NEW: Smart Toggle for Checkbox Dropdown (Saves instantly without full page refresh)
+    function toggleRiskType(id, typeStr, isChecked) {
+        if (!wardData[currentWard]) wardData[currentWard] = {};
+        let current = wardData[currentWard][id + '_type'];
+        if (current === undefined) {
+            const task = db.risks.find(t => (findVal(t, 'riskid') || findVal(t, 'id')) === id);
+            current = task ? (findVal(task, 'type') || "") : "";
+        }
+        
+        let arr = current ? current.split(', ') : [];
+        if (isChecked && !arr.includes(typeStr)) arr.push(typeStr);
+        if (!isChecked) arr = arr.filter(x => x !== typeStr);
+        
+        let newVal = arr.join(', ');
+        wardData[currentWard][id + '_type'] = newVal;
+        localStorage.setItem('wardData', JSON.stringify(wardData));
+        document.getElementById('label_' + id).innerText = newVal || "Select...";
+    }
+
     function downloadPDF() {
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         let swapList = [];
@@ -399,11 +427,25 @@
         if (currentType === 'risks') {
             const imp = document.getElementById('mImp').value;
             const prob = document.getElementById('mProb').value;
+            
+            // Gather Selected Risk Types
+            const typeCbs = document.querySelectorAll('.risk-type-cb:checked');
+            const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
+
             newTask = { 
                 "riskid": newId, "riskdescription": desc, "ward": currentWard,
-                "impact": imp, "prob": prob, "mitigationplan": ""
+                "type": selectedTypes, "impact": imp, "prob": prob, "mitigationplan": ""
             };
             db.risks.push(newTask);
+            
+            // Auto-save the new type to local storage so it displays instantly
+            if (!wardData[currentWard]) wardData[currentWard] = {};
+            wardData[currentWard][newId + '_type'] = selectedTypes;
+            localStorage.setItem('wardData', JSON.stringify(wardData));
+            
+            // Uncheck the boxes for the next time the modal opens
+            document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
+
         } else {
             const who = document.getElementById('mWho').value;
             const due = document.getElementById('mDue').value;
@@ -415,6 +457,9 @@
             if (currentType === 'enablers') db.enablers.push(newTask);
             else db.moves.push(newTask);
         }
+        
+        // Clear description field
+        document.getElementById('mDesc').value = '';
         closeModal(); showModule(currentType);
     }
 
@@ -427,91 +472,12 @@
         const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, ''));
         return k ? obj[k] : "";
     }
-    
-    function downloadPDF() {
-        // 1. Hide buttons
-        document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
-        
-        // 2. THE MAGIC SWAP: Convert Textareas to Divs for perfect PDF wrapping
-        let swapList = [];
-        document.querySelectorAll('textarea').forEach(el => {
-            // Create a temporary div to replace the textarea
-            const div = document.createElement('div');
-            div.innerText = el.value; // Copy the text
-            
-            // Copy styles so it looks identical
-            div.style.width = '100%';
-            div.style.minHeight = el.style.height; // Use the expanded height
-            div.style.fontSize = getComputedStyle(el).fontSize;
-            div.style.padding = '5px';
-            div.style.border = '1px solid #ccc';
-            div.style.borderRadius = '4px';
-            div.style.whiteSpace = 'pre-wrap'; // This ensures text wraps correctly!
-            div.style.fontFamily = 'sans-serif';
-            div.style.backgroundColor = '#fff';
-            
-            // Hide textarea, show div
-            el.style.display = 'none';
-            el.parentNode.insertBefore(div, el);
-            swapList.push({ area: el, replacement: div });
-        });
 
-        // 3. SCOPE FILTER (Hide empty rows)
-        let hiddenElements = [];
-        if (currentType === 'brief') {
-            document.querySelectorAll('.lib-row').forEach(row => {
-                // Check the value in the temporary div, not the hidden textarea
-                const div = row.querySelector('div[style*="pre-wrap"]'); 
-                const note = div ? div.innerText.trim() : "";
-                
-                if (!note) {
-                    row.style.display = 'none'; 
-                    hiddenElements.push(row);
-                }
-            });
-            document.querySelectorAll('.scope-category').forEach(cat => {
-                const visibleRows = Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none');
-                if (visibleRows.length === 0) {
-                    cat.style.display = 'none';
-                    hiddenElements.push(cat);
-                }
-            });
-        }
-
-        const element = document.getElementById('moduleBody');
-        const title = document.getElementById('moduleTitle').innerText;
-        const orient = currentType === 'brief' ? 'portrait' : 'landscape';
-
-        const opt = { 
-            margin:       [0.3, 0.3, 0.3, 0.3], 
-            filename:     `${currentWard}_${title}_${new Date().toISOString().slice(0,10)}.pdf`, 
-            image:        { type: 'jpeg', quality: 1.0 },
-            html2canvas:  { scale: 2, useCORS: true }, 
-            jsPDF:        { unit: 'in', format: 'a4', orientation: orient },
-            pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            // 4. RESTORE: Swap Divs back to Textareas
-            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
-            hiddenElements.forEach(el => el.style.display = ''); 
-            
-            swapList.forEach(item => {
-                item.replacement.remove(); // Delete the temporary div
-                item.area.style.display = ''; // Show the editable textarea again
-            });
-        });
-    }  
-function autoResize(el) {
-        el.style.height = 'auto'; // Reset height
-        el.style.height = el.scrollHeight + 'px'; // Set to full text height
-    }
-// --- SYSTEM: BACKUP & RESTORE ---
+    // --- SYSTEM: BACKUP & RESTORE ---
     function downloadData() {
         const dataStr = JSON.stringify(wardData);
         const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
         const exportName = `Project_Backup_${new Date().toISOString().slice(0,10)}.json`;
-        
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
         linkElement.setAttribute('download', exportName);
@@ -521,7 +487,6 @@ function autoResize(el) {
     function uploadData(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
@@ -529,15 +494,13 @@ function autoResize(el) {
                 localStorage.setItem('wardData', JSON.stringify(wardData));
                 alert("Project loaded successfully!");
                 location.reload(); 
-            } catch (err) {
-                alert("Error loading file. Make sure it is a valid .json backup.");
-            }
+            } catch (err) { alert("Error loading file. Make sure it is a valid .json backup."); }
         };
         reader.readAsText(file);
     }
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+    <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
         <h2 id="modalTitle" style="margin-top:0;">Add New Item</h2>
         
         <label style="display:block; margin-top:10px; font-weight:bold;">Description</label>
@@ -560,24 +523,29 @@ function autoResize(el) {
         </div>
 
         <div id="riskFields" style="display:none;">
+            <label style="display:block; margin-top:10px; font-weight:bold;">Risk Type (Select all that apply)</label>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px; border:1px solid #ccc; padding:10px; border-radius:4px; background:#f8fafc;">
+                <label><input type="checkbox" value="Programme" class="risk-type-cb"> Programme</label>
+                <label><input type="checkbox" value="Cost" class="risk-type-cb"> Cost</label>
+                <label><input type="checkbox" value="Disruption" class="risk-type-cb"> Disruption</label>
+                <label><input type="checkbox" value="H&S" class="risk-type-cb"> H&S</label>
+                <label><input type="checkbox" value="Compliance" class="risk-type-cb"> Compliance</label>
+            </div>
+
             <div style="display:flex; gap:10px;">
                 <div style="flex:1;">
                     <label style="display:block; margin-top:10px; font-weight:bold;">Impact (1-5)</label>
                     <select id="mImp" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                        <option value="1">1 - Negligible</option>
-                        <option value="2">2 - Minor</option>
-                        <option value="3">3 - Moderate</option>
-                        <option value="4">4 - Major</option>
+                        <option value="1">1 - Negligible</option><option value="2">2 - Minor</option>
+                        <option value="3">3 - Moderate</option><option value="4">4 - Major</option>
                         <option value="5">5 - Catastrophic</option>
                     </select>
                 </div>
                 <div style="flex:1;">
                     <label style="display:block; margin-top:10px; font-weight:bold;">Prob (1-5)</label>
                     <select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                        <option value="1">1 - Rare</option>
-                        <option value="2">2 - Unlikely</option>
-                        <option value="3">3 - Possible</option>
-                        <option value="4">4 - Likely</option>
+                        <option value="1">1 - Rare</option><option value="2">2 - Unlikely</option>
+                        <option value="3">3 - Possible</option><option value="4">4 - Likely</option>
                         <option value="5">5 - Certain</option>
                     </select>
                 </div>
