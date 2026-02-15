@@ -253,7 +253,9 @@
                 const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
                 const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
                 const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
-                const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigationplan') || "";
+                
+                // FIXED: Looks for the new "Mitigating Action/s" column name
+                const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigatingactions') || findVal(t, 'mitigationplan') || "";
 
                 const impVal = parseInt(savedImp) || 1;
                 const probVal = parseInt(savedProb) || 1;
@@ -284,14 +286,14 @@
                         
                         <div style="font-size:0.8rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${score}</div>
                         
-                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Mitigation Plan..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Mitigating Action/s..." oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea>
                     </div>`;
             }).join('');
 
-            // FIXED: Changed "Imp" to "Impact"
+            // FIXED: Table header updated
             body.innerHTML += `
                 <div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;">
-                    <div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigation Plan</div>
+                    <div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div>
                 </div>${rows}`;
         }
 
@@ -355,7 +357,6 @@
         document.getElementById('label_' + id).innerText = newVal || "Select...";
     }
 
-    // --- PDF PRINT ENGINE (Fixed Whitespace & Page Breaks) ---
     function downloadPDF() {
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         
@@ -364,9 +365,9 @@
             const div = document.createElement('div');
             div.innerText = el.value; 
             div.style.width = '100%'; 
-            div.style.height = 'auto'; // Let it hug the text tightly
+            div.style.height = 'auto'; 
             div.style.fontSize = getComputedStyle(el).fontSize; 
-            div.style.padding = '4px'; // Tightened padding to reduce whitespace
+            div.style.padding = '4px'; 
             div.style.border = '1px solid #ccc'; 
             div.style.whiteSpace = 'pre-wrap'; 
             div.style.fontFamily = 'sans-serif';
@@ -395,14 +396,12 @@
         const title = document.getElementById('moduleTitle').innerText;
         const orient = currentType === 'brief' ? 'portrait' : 'landscape';
 
-        // STRICT PAGE BREAK CONFIGURATION
         const opt = { 
-            margin: [0.4, 0.3, 0.4, 0.3], // Top, Left, Bottom, Right
+            margin: [0.4, 0.3, 0.4, 0.3], 
             filename: `${currentWard}_${title}.pdf`, 
             image: { type: 'jpeg', quality: 1.0 }, 
             html2canvas: { scale: 2, useCORS: true }, 
             jsPDF: { unit: 'in', format: 'a4', orientation: orient }, 
-            // This 'avoid' array forces the printer to never cut these classes in half
             pagebreak: { mode: ['css', 'legacy'], avoid: ['.lib-row', '.row-header', '.scope-category', '.report-header'] } 
         };
 
@@ -438,9 +437,10 @@
             const typeCbs = document.querySelectorAll('.risk-type-cb:checked');
             const selectedTypes = Array.from(typeCbs).map(cb => cb.value).join(', ');
 
+            // FIXED: Set standard field name matching your new terminology internally
             newTask = { 
                 "riskid": newId, "riskdescription": desc, "ward": currentWard,
-                "type": selectedTypes, "impact": imp, "prob": prob, "mitigationplan": ""
+                "type": selectedTypes, "impact": imp, "prob": prob, "mitigatingaction/s": ""
             };
             db.risks.push(newTask);
             
