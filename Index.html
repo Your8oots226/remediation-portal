@@ -146,12 +146,13 @@
         </div>
     <script>
 // 1. DATABASE & CONFIG
-    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [], equipment: [] };
+    // Note: We changed 'equipment' to 'equipLibrary' so it only acts as a dictionary, not a task list.
+    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [], equipLibrary: [] };
     let currentWard = "";
     let currentType = "";
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
     
-    // NEW: Equipment Audit State Variables
+    // Equipment Audit State Variables
     let equipCurrentRoom = "All"; 
     let equipSortBy = "room"; 
 
@@ -177,7 +178,7 @@
                 db.risks = getSheet('risk'); 
                 db.directory = getSheet('directory') || getSheet('contacts') || []; 
                 db.changes = getSheet('change'); 
-                db.equipment = getSheet('equipment') || getSheet('audit') || getSheet('asset') || [];
+                db.equipLibrary = getSheet('equipment') || getSheet('audit') || getSheet('asset') || [];
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -415,24 +416,23 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:8px 6px; font-size:0.85rem; background:#1e293b; color:white; font-weight:bold; margin-top:10px;"><div></div><div>TOTALS (Pending & Instructed)</div><div></div><div></div><div style="color:#fecaca;">£${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div></div><div style="color:#fecaca;">${totalTime} Days</div><div></div><div></div></div>`;
         }
 
-        // --- F. EQUIPMENT AUDIT MODULE (ROOM-DRIVEN & SORTABLE) ---
+        // --- F. EQUIPMENT AUDIT MODULE (CLEAN SLATE & AUTOCOMPLETE LIBRARY) ---
         else if (type === 'equipment') {
             body.innerHTML = navButtons + pdfHeader;
             
-            const tasks = db.equipment.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-            
-            // Gather all possible rooms (from Excel + locally generated ones)
-            let baseRooms = tasks.map(t => findVal(t, 'room') || findVal(t, 'roomname') || "");
+            // 1. Datalists ONLY pull from the Excel Library and custom added rooms
+            const allDesc = [...new Set(db.equipLibrary.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort();
+            const excelRooms = [...new Set(db.equipLibrary.map(item => findVal(item, 'room') || findVal(item, 'roomname') || findVal(item, 'roomnumber')))].filter(Boolean);
             if (!wardData[currentWard]) wardData[currentWard] = {};
-            let customRooms = wardData[currentWard]['_customRooms'] || [];
-            let allEqRooms = [...new Set([...baseRooms, ...customRooms])].filter(Boolean).sort();
+            const customRooms = wardData[currentWard]['_customRooms'] || [];
+            const allEqRooms = [...new Set([...excelRooms, ...customRooms])].filter(Boolean).sort();
             
-            // Populate invisible datalists for autocomplete
-            const allDesc = [...new Set(db.equipment.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort();
             document.getElementById('dl-desc').innerHTML = allDesc.map(d => `<option value="${d}">`).join('');
             document.getElementById('dl-room').innerHTML = allEqRooms.map(r => `<option value="${r}">`).join('');
 
-            // NEW: The Audit Control Bar
+            // 2. The Actual Tasks are NOW ONLY pulled from the user's saved data
+            const tasks = wardData[currentWard]['equipmentLog'] || [];
+
             let controlsHtml = `
                 <div class="no-print" style="background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:15px; display:flex; flex-wrap:wrap; gap:15px; align-items:center; justify-content:space-between;">
                     <div style="display:flex; align-items:center; gap:10px;">
@@ -453,39 +453,32 @@
                 </div>`;
             body.innerHTML += controlsHtml;
 
-            // Map ALL tasks with their current saved values first so we can sort them
+            // Map the tasks allowing for inline edits
             let mappedTasks = tasks.map(t => {
-                const id = findVal(t, 'uniqueid') || findVal(t, 'id') || "EQ";
-                const baseDesc = findVal(t, 'description') || findVal(t, 'item') || "";
-                
-                const desc = (wardData[currentWard] && wardData[currentWard][id + '_desc']) !== undefined ? wardData[currentWard][id + '_desc'] : baseDesc;
-                const room = (wardData[currentWard] && wardData[currentWard][id + '_room']) || findVal(t, 'room') || findVal(t, 'roomname') || "";
-                const group = (wardData[currentWard] && wardData[currentWard][id + '_group']) || findVal(t, 'groupno') || findVal(t, 'group') || "1";
-                const loc = (wardData[currentWard] && wardData[currentWard][id + '_loc']) || findVal(t, 'location') || "";
-                const action = (wardData[currentWard] && wardData[currentWard][id + '_action']) || findVal(t, 'action') || "Retain / Store";
-                const notes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'notes') || findVal(t, 'comments') || "";
-
+                const id = t.id;
+                const desc = (wardData[currentWard][id + '_desc'] !== undefined) ? wardData[currentWard][id + '_desc'] : t.desc;
+                const room = (wardData[currentWard][id + '_room'] !== undefined) ? wardData[currentWard][id + '_room'] : t.room;
+                const group = (wardData[currentWard][id + '_group'] !== undefined) ? wardData[currentWard][id + '_group'] : t.group;
+                const loc = (wardData[currentWard][id + '_loc'] !== undefined) ? wardData[currentWard][id + '_loc'] : t.loc;
+                const action = (wardData[currentWard][id + '_action'] !== undefined) ? wardData[currentWard][id + '_action'] : t.action;
+                const notes = (wardData[currentWard][id] !== undefined) ? wardData[currentWard][id] : t.notes;
                 return { id, desc, room, group, loc, action, notes };
             });
 
-            // Filter if a specific room is selected
             if (equipCurrentRoom !== 'All') {
                 mappedTasks = mappedTasks.filter(t => t.room === equipCurrentRoom);
             }
 
-            // Apply Sorting
             if (equipSortBy === 'room') {
                 mappedTasks.sort((a, b) => a.room.localeCompare(b.room) || a.desc.localeCompare(b.desc));
             } else {
                 mappedTasks.sort((a, b) => a.desc.localeCompare(b.desc));
             }
 
-            // Render Logic (Grouping by room if sorting by room and viewing all)
             let lastRoomRendered = null;
             let rowsHtml = "";
 
             mappedTasks.forEach(t => {
-                // Insert categorical headers if we are looking at all rooms, sorted by room
                 if (equipCurrentRoom === 'All' && equipSortBy === 'room' && t.room !== lastRoomRendered) {
                     const roomName = t.room || "Unassigned";
                     rowsHtml += `<div class="row-header" style="background:#f1f5f9; color:#334155; padding:6px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-top:10px; margin-bottom:5px; page-break-inside:avoid;">Room: ${roomName}</div>`;
@@ -512,7 +505,7 @@
             });
 
             if (mappedTasks.length === 0) {
-                rowsHtml = `<div style="padding:20px; text-align:center; color:#64748b; font-style:italic; border-bottom:1px solid #ddd;">No equipment listed for this view.</div>`;
+                rowsHtml = `<div style="padding:20px; text-align:center; color:#64748b; font-style:italic; border-bottom:1px solid #ddd;">No equipment listed for this view. Start your audit by clicking "+ Add New Item".</div>`;
             }
 
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.6fr 2fr 1.5fr 0.6fr 1.5fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Description</div><div>Room</div><div>Group</div><div>Storage Location</div><div>Action</div><div>Notes</div></div>${rowsHtml}`;
@@ -779,7 +772,6 @@
             document.getElementById('mChangeReq').innerHTML = getDirOptions('');
         } else if (currentType === 'equipment') {
             document.getElementById('standardDescField').style.display = 'block'; document.getElementById('equipFields').style.display = 'block';
-            // NEW: Pre-fill the room if the user is in a specific room context
             document.getElementById('mEquipRoom').value = (equipCurrentRoom === 'All') ? '' : equipCurrentRoom; 
             document.getElementById('mEquipLoc').value = '';
         } else if (currentType === 'directory') {
@@ -835,18 +827,20 @@
             db.changes.push(newTask);
             
         } else if (currentType === 'equipment') {
+            // NEW: Only push items to the user's local data storage, ignoring the Excel Library array
             const room = document.getElementById('mEquipRoom').value; const group = document.getElementById('mEquipGroup').value;
             const loc = document.getElementById('mEquipLoc').value; const action = document.getElementById('mEquipAction').value;
             
-            // Ensure newly added room is remembered globally
             if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = [];
             if (room && !wardData[currentWard]['_customRooms'].includes(room)) {
                 wardData[currentWard]['_customRooms'].push(room);
-                localStorage.setItem('wardData', JSON.stringify(wardData));
             }
 
-            newTask = { "uniqueid": newId, "description": desc, "ward": currentWard, "room": room, "groupno": group, "location": loc, "action": action };
-            db.equipment.push(newTask);
+            if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = [];
+
+            newTask = { "id": newId, "desc": desc, "room": room, "group": group, "loc": loc, "action": action, "notes": "" };
+            wardData[currentWard]['equipmentLog'].push(newTask);
+            localStorage.setItem('wardData', JSON.stringify(wardData));
 
         } else {
             const who = document.getElementById('mWho').value; const due = document.getElementById('mDue').value; const status = document.getElementById('mStatus').value;
