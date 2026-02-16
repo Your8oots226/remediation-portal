@@ -85,27 +85,40 @@
 </div>
 
 <div id="view-menu" class="view">
-    <div style="max-width:800px; margin:0 auto;">
-        <button class="btn" style="background:#64748b; margin-bottom:20px;" onclick="switchView('view-home')">← Back to Wards</button>
+    <div style="max-width:900px; margin:0 auto;">
+        
+        <div class="no-print" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
+            <button class="btn" style="background:#64748b;" onclick="switchView('view-home')">← Back to Wards</button>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" style="background:#3b82f6;" onclick="downloadData()">⬇ Save Project</button>
+                <button class="btn" style="background:#8b5cf6;" onclick="document.getElementById('loadInput').click()">⬆ Load Project</button>
+                <input type="file" id="loadInput" style="display:none;" accept=".json" onchange="uploadData(event)">
+            </div>
+        </div>
+
         <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
         
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-            <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px;">
-                <div style="font-size:2rem; margin-bottom:10px;">📄</div>
-                <h3>Scope Builder</h3>
-                <p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📄</div><h3>Scope Builder</h3><p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
             </div>
-            
-            <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px;">
-                <div style="font-size:2rem; margin-bottom:10px;">🚧</div>
-                <h3>Enablers</h3>
-                <p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
+            <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">🚧</div><h3>Enablers</h3><p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
             </div>
-            
-            <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px;">
-                <div style="font-size:2rem; margin-bottom:10px;">📦</div>
-                <h3>Ward Moves</h3>
-                <p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
+            <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📦</div><h3>Ward Moves</h3><p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
+            </div>
+            <div class="card" onclick="showModule('programme')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📅</div><h3>Programme</h3><p style="color:#64748b; font-size:0.9rem;">Activities & Milestones</p>
+            </div>
+            <div class="card" onclick="showModule('risks')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div><h3>Risk Register</h3><p style="color:#64748b; font-size:0.9rem;">Risks, Issues & Mitigations</p>
+            </div>
+            <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
+            </div>
+            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3>Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Key Risks</p>
             </div>
         </div>
     </div>
@@ -340,7 +353,7 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
-        // --- E. REPORTS MODULE (NOW WITH GRAPHICAL TIMELINE) ---
+        // --- E. REPORTS MODULE ---
         else if (type === 'reports') {
             body.innerHTML = navButtons + pdfHeader;
             
@@ -362,7 +375,6 @@
 
             // 3. GRAPHICAL PROGRAMME TIMELINE
             const progTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-            
             html += `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
                     <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Programme Timeline</h3>`;
@@ -391,13 +403,13 @@
                     let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     
-                    if (width < 2) width = 2; // Ensure 1-day tasks are visible
+                    if (width < 2) width = 2; 
                     if (left + width > 100) width = 100 - left;
                     
-                    let barColor = "#94a3b8"; // Not Started (Gray)
-                    if (t.savedStatus === 'Complete') barColor = "#10b981"; // Green
-                    if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; // Blue
-                    if (t.savedStatus === 'Late') barColor = "#ef4444"; // Red
+                    let barColor = "#94a3b8"; 
+                    if (t.savedStatus === 'Complete') barColor = "#10b981"; 
+                    if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; 
+                    if (t.savedStatus === 'Late') barColor = "#ef4444"; 
 
                     return `
                         <div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;">
@@ -427,10 +439,10 @@
                     </div></div>`;
             }
 
-            // 4. Auto-Calculated Top 3 Risks
+            // 4. Auto-Calculated High Risks (Score 12+)
             html += `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Top 3 Project Risks</h3>`;
+                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Key Project Risks (Score 12+)</h3>`;
             
             const wardRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             let scoredRisks = wardRisks.map(t => {
@@ -443,13 +455,13 @@
                 return { id, desc, score, savedMit };
             });
 
-            scoredRisks.sort((a, b) => b.score - a.score);
-            const top3 = scoredRisks.slice(0, 3);
+            // Filtering for score >= 12 instead of just taking the top 3
+            const highRisks = scoredRisks.filter(r => r.score >= 12).sort((a, b) => b.score - a.score);
 
-            if (top3.length === 0) {
-                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged for this ward.</p>`;
+            if (highRisks.length === 0) {
+                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`;
             } else {
-                let riskRows = top3.map(r => {
+                let riskRows = highRisks.map(r => {
                     let colorClass = ""; let scoreColor = "#64748b"; 
                     if (r.score >= 15) { colorClass = "background-color:#fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#ef4444"; } 
                     else if (r.score >= 8) { colorClass = "background-color:#fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#d97706"; }
