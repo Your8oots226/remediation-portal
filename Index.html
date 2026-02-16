@@ -58,27 +58,30 @@
 
         <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
             <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📄</div><h3>Scope Builder</h3><p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
+                <div style="font-size:2rem; margin-bottom:10px;">📄</div><h3>Scope Builder</h3><p style="color:#64748b; font-size:0.9rem;">Construction Brief</p>
             </div>
             <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">🚧</div><h3>Enablers</h3><p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
+                <div style="font-size:2rem; margin-bottom:10px;">🚧</div><h3>Enablers</h3><p style="color:#64748b; font-size:0.9rem;">Pre-Works Tasks</p>
             </div>
             <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📦</div><h3>Ward Moves</h3><p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
+                <div style="font-size:2rem; margin-bottom:10px;">📦</div><h3>Ward Moves</h3><p style="color:#64748b; font-size:0.9rem;">Operational Moves</p>
             </div>
             <div class="card" onclick="showModule('programme')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📅</div><h3>Programme</h3><p style="color:#64748b; font-size:0.9rem;">Activities & Milestones</p>
+                <div style="font-size:2rem; margin-bottom:10px;">📅</div><h3>Programme</h3><p style="color:#64748b; font-size:0.9rem;">Schedule & Milestones</p>
             </div>
             <div class="card" onclick="showModule('risks')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div><h3>Risk Register</h3><p style="color:#64748b; font-size:0.9rem;">Risks, Issues & Mitigations</p>
+                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div><h3>Risk Register</h3><p style="color:#64748b; font-size:0.9rem;">Risks & Mitigations</p>
+            </div>
+            <div class="card" onclick="showModule('changes')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">🔄</div><h3>Change Control</h3><p style="color:#64748b; font-size:0.9rem;">Scope & Cost Variations</p>
             </div>
             <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
                 <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
             </div>
-            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s; background:#f8fafc; border:2px dashed #cbd5e1;">
-                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3 style="color:#334155;">Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Top Risks</p>
+            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3>Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview</p>
             </div>
         </div>
     </div>
@@ -140,7 +143,7 @@
         </div>
     <script>
 // 1. DATABASE & CONFIG
-    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [] };
+    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [] };
     let currentWard = "";
     let currentType = "";
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
@@ -166,6 +169,7 @@
                 db.programme = getSheet('programme') || getSheet('program'); 
                 db.risks = getSheet('risk'); 
                 db.directory = getSheet('directory') || getSheet('contacts') || []; 
+                db.changes = getSheet('change'); // NEW: Loads Change Control
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -248,6 +252,7 @@
         else if (type === 'moves') { headerTitle += " Ward Move"; subTitle = "Move Plan"; }
         else if (type === 'programme') { headerTitle += " Programme"; subTitle = "Activities & Milestones"; }
         else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; }
+        else if (type === 'changes') { headerTitle += " Change Control"; subTitle = "Scope & Cost Variations"; }
         else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; }
         else if (type === 'reports') { headerTitle += " Monthly Report"; subTitle = "Executive Overview"; }
 
@@ -267,6 +272,7 @@
 
         document.getElementById('moduleTitle').innerText = subTitle;
 
+        // --- A. SCOPE BUILDER ---
         if (type === 'brief') {
             body.innerHTML = navButtons + pdfHeader;
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
@@ -281,6 +287,8 @@
                 body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px; page-break-inside:avoid;">${cat}</div>${rows}</div>`;
             });
         }
+        
+        // --- B. PROJECT DIRECTORY ---
         else if (type === 'directory') {
             body.innerHTML = navButtons + pdfHeader;
             let contacts = [...db.directory];
@@ -294,6 +302,8 @@
             }).join('');
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div></div>${rows}`;
         }
+        
+        // --- C. RISK REGISTER ---
         else if (type === 'risks') { 
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
@@ -315,6 +325,8 @@
             }).join('');
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div></div>${rows}`;
         }
+        
+        // --- D. PROGRAMME MODULE ---
         else if (type === 'programme') {
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
@@ -353,47 +365,94 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
-        // --- E. REPORTS MODULE ---
+        // --- E. NEW: CHANGE CONTROL MODULE ---
+        else if (type === 'changes') {
+            body.innerHTML = navButtons + pdfHeader;
+            const tasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+            
+            let totalCost = 0;
+            let totalTime = 0;
+
+            let rows = tasks.map(t => {
+                const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
+                const desc = findVal(t, 'description') || "";
+                
+                const savedReq = (wardData[currentWard] && wardData[currentWard][id + '_req']) || findVal(t, 'requestor') || "";
+                const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || "";
+                const savedCost = (wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "";
+                const savedTime = (wardData[currentWard] && wardData[currentWard][id + '_time']) || findVal(t, 'timeimpact') || findVal(t, 'time') || "";
+                const savedFund = (wardData[currentWard] && wardData[currentWard][id + '_fund']) || findVal(t, 'fundingsource') || "";
+                const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
+                const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'comments') || "";
+
+                // Only sum up changes that are Instructed or Pending
+                if (savedStatus === 'Instructed' || savedStatus === 'Pending') {
+                    totalCost += parseFloat(savedCost) || 0;
+                    totalTime += parseFloat(savedTime) || 0;
+                }
+
+                const statusOptions = ['Pending', 'Instructed', 'Refused', 'Cancelled'].map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                
+                // Color Code for visual management
+                let rowColor = "";
+                if (savedStatus === 'Instructed') rowColor = "background-color: #dcfce7;"; // Soft Green
+                else if (savedStatus === 'Refused' || savedStatus === 'Cancelled') rowColor = "background-color: #f1f5f9; color: #94a3b8;"; // Muted Gray
+
+                return `
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
+                        <div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div>
+                        <div><select onchange="saveComment('${id}_req', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(savedReq)}</select></div>
+                        <div><input type="date" value="${savedDate}" onchange="saveComment('${id}_date', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div>
+                        <div><input type="number" value="${savedCost}" onchange="saveComment('${id}_cost', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div>
+                        <div><input type="text" value="${savedFund}" onchange="saveComment('${id}_fund', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div>
+                        <div><input type="number" value="${savedTime}" onchange="saveComment('${id}_time', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div>
+                        <div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
+                    </div>`;
+            }).join('');
+            
+            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>No.</div><div>Description</div><div>Requestor</div><div>Date</div><div>Cost £</div><div>Funding</div><div>Time (Days)</div><div>Status</div><div>Comments</div></div>${rows}`;
+            
+            // The Live Totals Row
+            body.innerHTML += `
+                <div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:8px 6px; font-size:0.85rem; background:#1e293b; color:white; font-weight:bold; margin-top:10px;">
+                    <div></div><div>TOTALS (Pending & Instructed)</div><div></div><div></div>
+                    <div style="color:#fecaca;">£${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                    <div></div>
+                    <div style="color:#fecaca;">${totalTime} Days</div>
+                    <div></div><div></div>
+                </div>`;
+        }
+
+        // --- F. REPORTS MODULE ---
         else if (type === 'reports') {
             body.innerHTML = navButtons + pdfHeader;
             
             // 1. Progress Status
             const savedProgress = (wardData[currentWard] && wardData[currentWard]['report_progress']) || "";
-            let html = `
-                <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">1. Progress Status</h3>
-                    <textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter monthly progress update here..." oninput="autoResize(this); saveComment('report_progress', this.value)">${savedProgress}</textarea>
-                </div>`;
+            let html = `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">1. Progress Status</h3><textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter monthly progress update here..." oninput="autoResize(this); saveComment('report_progress', this.value)">${savedProgress}</textarea></div>`;
 
             // 2. Programme Overview
             const savedProgReport = (wardData[currentWard] && wardData[currentWard]['report_programme']) || "";
-            html += `
-                <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">2. Programme Overview</h3>
-                    <textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter programme status, delays, and upcoming milestones here..." oninput="autoResize(this); saveComment('report_programme', this.value)">${savedProgReport}</textarea>
-                </div>`;
+            html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">2. Programme Overview</h3><textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter programme status, delays, and upcoming milestones here..." oninput="autoResize(this); saveComment('report_programme', this.value)">${savedProgReport}</textarea></div>`;
 
-            // 3. GRAPHICAL PROGRAMME TIMELINE
+            // 3. Programme Timeline
             const progTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
-            html += `
-                <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Programme Timeline</h3>`;
-
+            html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Programme Timeline</h3>`;
             let validTasks = progTasks.map(t => {
                 const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
                 const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
                 const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
                 const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
                 const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started";
-                
                 const startObj = savedStart ? new Date(savedStart) : null;
                 const endObj = calcEndObj(savedStart, savedDur);
                 return { desc, startObj, endObj, savedStatus };
             }).filter(t => t.startObj && t.endObj);
 
-            if (validTasks.length === 0) {
-                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">Add Start Dates and Durations in the Programme module to generate timeline.</p>`;
-            } else {
+            if (validTasks.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">Add Start Dates and Durations in the Programme module to generate timeline.</p>`; } 
+            else {
                 const minDate = new Date(Math.min(...validTasks.map(t => t.startObj)));
                 const maxDate = new Date(Math.max(...validTasks.map(t => t.endObj)));
                 let totalSpan = (maxDate - minDate) / (1000 * 60 * 60 * 24);
@@ -402,48 +461,20 @@
                 let barsHtml = validTasks.map(t => {
                     let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
-                    
                     if (width < 2) width = 2; 
                     if (left + width > 100) width = 100 - left;
-                    
                     let barColor = "#94a3b8"; 
                     if (t.savedStatus === 'Complete') barColor = "#10b981"; 
                     if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; 
                     if (t.savedStatus === 'Late') barColor = "#ef4444"; 
 
-                    return `
-                        <div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;">
-                            <div style="width:35%; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold; color:#334155;" title="${t.desc}">${t.desc}</div>
-                            <div style="width:65%; position:relative; background:#f1f5f9; height:18px; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                                <div style="position:absolute; left:${left}%; width:${width}%; background:${barColor}; height:100%; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-                            </div>
-                        </div>`;
+                    return `<div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;"><div style="width:35%; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold; color:#334155;" title="${t.desc}">${t.desc}</div><div style="width:65%; position:relative; background:#f1f5f9; height:18px; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div style="position:absolute; left:${left}%; width:${width}%; background:${barColor}; height:100%; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div></div></div>`;
                 }).join('');
-                
-                html += `
-                    <div style="border:1px solid #e2e8f0; padding:15px; border-radius:4px; background:white;">
-                        <div style="display:flex; margin-bottom:12px; font-size:0.7rem; color:#64748b; font-weight:bold;">
-                            <div style="width:35%;">Activity</div>
-                            <div style="width:65%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">
-                                <span>${formatDateGB(minDate)}</span>
-                                <span>${formatDateGB(maxDate)}</span>
-                            </div>
-                        </div>
-                        ${barsHtml}
-                        <div style="margin-top:15px; display:flex; gap:15px; font-size:0.7rem; color:#64748b; justify-content:center;">
-                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#10b981; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Complete</span>
-                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#3b82f6; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> In Progress</span>
-                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#ef4444; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Late</span>
-                            <span style="display:flex; align-items:center; gap:4px;"><div style="width:12px; height:12px; background:#94a3b8; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div> Not Started</span>
-                        </div>
-                    </div></div>`;
+                html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:4px; background:white;"><div style="display:flex; margin-bottom:12px; font-size:0.7rem; color:#64748b; font-weight:bold;"><div style="width:35%;">Activity</div><div style="width:65%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;"><span>${formatDateGB(minDate)}</span><span>${formatDateGB(maxDate)}</span></div></div>${barsHtml}</div>`;
             }
 
-            // 4. Auto-Calculated High Risks (Score 12+)
-            html += `
-                <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Key Project Risks (Score 12+)</h3>`;
-            
+            // 4. Key Project Risks
+            html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Key Project Risks (Score 12+)</h3>`;
             const wardRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             let scoredRisks = wardRisks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
@@ -454,37 +485,52 @@
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
                 return { id, desc, score, savedMit };
             });
-
-            // Filtering for score >= 12 instead of just taking the top 3
             const highRisks = scoredRisks.filter(r => r.score >= 12).sort((a, b) => b.score - a.score);
-
-            if (highRisks.length === 0) {
-                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`;
-            } else {
+            if (highRisks.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`; } 
+            else {
                 let riskRows = highRisks.map(r => {
                     let colorClass = ""; let scoreColor = "#64748b"; 
                     if (r.score >= 15) { colorClass = "background-color:#fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#ef4444"; } 
                     else if (r.score >= 8) { colorClass = "background-color:#fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#d97706"; }
-
-                    return `
-                        <div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;">
-                            <div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${r.id}</div>
-                            <div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${r.desc}</div>
-                            <div style="font-size:0.9rem; font-weight:bold; color:${scoreColor}; text-align:center; padding-top:4px;">${r.score}</div>
-                            <div style="font-size:0.8rem; line-height:1.3; padding-top:4px; white-space:pre-wrap;">${r.savedMit || "<i>No mitigation recorded</i>"}</div>
-                        </div>`;
+                    return `<div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${r.id}</div><div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${r.desc}</div><div style="font-size:0.9rem; font-weight:bold; color:${scoreColor}; text-align:center; padding-top:4px;">${r.score}</div><div style="font-size:0.8rem; line-height:1.3; padding-top:4px; white-space:pre-wrap;">${r.savedMit || "<i>No mitigation recorded</i>"}</div></div>`;
                 }).join('');
-
-                html += `
-                    <div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                        <div>ID</div><div>Risk Description</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div>
-                    </div>${riskRows}`;
+                html += `<div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${riskRows}`;
             }
-            html += `</div>`;
+
+            // 5. NEW: Auto-Calculated Impact of Changes
+            html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">5. Impact of Changes</h3>`;
+            
+            const changeTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+            let totalReportCost = 0; let totalReportTime = 0;
+            changeTasks.forEach(t => {
+                const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
+                const savedCost = (wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "";
+                const savedTime = (wardData[currentWard] && wardData[currentWard][id + '_time']) || findVal(t, 'timeimpact') || findVal(t, 'time') || "";
+                const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
+                if (savedStatus === 'Instructed' || savedStatus === 'Pending') {
+                    totalReportCost += parseFloat(savedCost) || 0;
+                    totalReportTime += parseFloat(savedTime) || 0;
+                }
+            });
+
+            html += `
+                <div style="display:flex; gap:20px;">
+                    <div style="flex:1; background:#f8fafc; padding:20px; border-radius:6px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Total Cost Impact</div>
+                        <div style="font-size:1.8rem; color:#ef4444; font-weight:bold;">£${totalReportCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                        <div style="font-size:0.7rem; color:#94a3b8; margin-top:5px;">(Includes Pending & Instructed)</div>
+                    </div>
+                    <div style="flex:1; background:#f8fafc; padding:20px; border-radius:6px; border:1px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Total Time Impact</div>
+                        <div style="font-size:1.8rem; color:#ef4444; font-weight:bold;">${totalReportTime} Days</div>
+                        <div style="font-size:0.7rem; color:#94a3b8; margin-top:5px;">(Includes Pending & Instructed)</div>
+                    </div>
+                </div></div>`;
+
             body.innerHTML += html;
         }
 
-        // --- F. TASK TRACKERS (Enablers & Moves) ---
+        // --- G. TASK TRACKERS (Enablers & Moves) ---
         else {
             body.innerHTML = navButtons + pdfHeader;
             const sheetData = type === 'enablers' ? db.enablers : db.moves;
@@ -547,62 +593,32 @@
         document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
         
         let swapList = [];
-        
         document.querySelectorAll('textarea, input[type="date"], input[type="text"], input[type="number"], select').forEach(el => {
             if (el.closest('#taskModal')) return; 
-            
             const div = document.createElement('div');
             
-            if (el.type === 'date' && el.value) {
-                const [yyyy, mm, dd] = el.value.split('-');
-                div.innerText = `${dd}/${mm}/${yyyy}`;
-            } 
-            else if (el.tagName === 'SELECT') {
-                div.innerText = el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : "";
-            } 
-            else {
-                div.innerText = el.value || "";
-            }
+            if (el.type === 'date' && el.value) { const [yyyy, mm, dd] = el.value.split('-'); div.innerText = `${dd}/${mm}/${yyyy}`; } 
+            else if (el.tagName === 'SELECT') { div.innerText = el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : ""; } 
+            else { div.innerText = el.value || ""; }
 
-            div.style.width = '100%'; 
-            div.style.fontSize = getComputedStyle(el).fontSize; 
-            div.style.padding = '4px'; 
-            div.style.border = '1px solid #ccc'; 
-            div.style.fontFamily = 'sans-serif'; 
-            div.style.boxSizing = 'border-box';
+            div.style.width = '100%'; div.style.fontSize = getComputedStyle(el).fontSize; div.style.padding = '4px'; 
+            div.style.border = '1px solid #ccc'; div.style.fontFamily = 'sans-serif'; div.style.boxSizing = 'border-box';
             
-            if (el.tagName === 'TEXTAREA') {
-                div.style.height = 'auto'; 
-                div.style.whiteSpace = 'pre-wrap'; 
-                div.style.lineHeight = '1.3';
-            } else {
-                div.style.minHeight = '24px';
-                div.style.display = 'flex';
-                div.style.alignItems = 'center';
-                div.style.overflow = 'hidden';
-            }
+            if (el.tagName === 'TEXTAREA') { div.style.height = 'auto'; div.style.whiteSpace = 'pre-wrap'; div.style.lineHeight = '1.3'; } 
+            else { div.style.minHeight = '24px'; div.style.display = 'flex'; div.style.alignItems = 'center'; div.style.overflow = 'hidden'; }
             
-            el.style.display = 'none'; 
-            el.parentNode.insertBefore(div, el);
-            swapList.push({ area: el, replacement: div });
+            el.style.display = 'none'; el.parentNode.insertBefore(div, el); swapList.push({ area: el, replacement: div });
         });
 
         let hiddenElements = [];
         if (currentType === 'brief') {
-            document.querySelectorAll('.lib-row').forEach(row => {
-                const div = row.querySelector('div[style*="pre-wrap"]'); 
-                if (!div || !div.innerText.trim()) { row.style.display = 'none'; hiddenElements.push(row); }
-            });
-            document.querySelectorAll('.scope-category').forEach(cat => {
-                if (Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none').length === 0) { cat.style.display = 'none'; hiddenElements.push(cat); }
-            });
+            document.querySelectorAll('.lib-row').forEach(row => { const div = row.querySelector('div[style*="pre-wrap"]'); if (!div || !div.innerText.trim()) { row.style.display = 'none'; hiddenElements.push(row); } });
+            document.querySelectorAll('.scope-category').forEach(cat => { if (Array.from(cat.querySelectorAll('.lib-row')).filter(r => r.style.display !== 'none').length === 0) { cat.style.display = 'none'; hiddenElements.push(cat); } });
         }
 
         const element = document.getElementById('moduleBody');
         const title = document.getElementById('moduleTitle').innerText;
-        
         const orient = (currentType === 'brief' || currentType === 'reports') ? 'portrait' : 'landscape';
-        
         const opt = { 
             margin: [0.4, 0.3, 0.4, 0.3], filename: `${currentWard}_${title}.pdf`, image: { type: 'jpeg', quality: 1.0 }, 
             html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: orient }, 
@@ -611,17 +627,18 @@
 
         html2pdf().set(opt).from(element).save().then(() => {
             document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex');
-            hiddenElements.forEach(el => el.style.display = ''); 
-            swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; });
+            hiddenElements.forEach(el => el.style.display = ''); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; });
         });
     }
 
+    // --- SMART MODAL LOGIC ROUTING ---
     function openModal() { 
         document.getElementById('taskModal').style.display = 'flex'; 
         document.getElementById('standardDescField').style.display = 'none';
         document.getElementById('taskFields').style.display = 'none';
         document.getElementById('progFields').style.display = 'none';
         document.getElementById('riskFields').style.display = 'none';
+        document.getElementById('changeFields').style.display = 'none';
         document.getElementById('dirFields').style.display = 'none';
 
         if (currentType === 'risks') {
@@ -629,6 +646,9 @@
         } else if (currentType === 'programme') {
             document.getElementById('standardDescField').style.display = 'block'; document.getElementById('progFields').style.display = 'block';
             document.getElementById('mLead').innerHTML = getDirOptions('');
+        } else if (currentType === 'changes') {
+            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('changeFields').style.display = 'block';
+            document.getElementById('mChangeReq').innerHTML = getDirOptions('');
         } else if (currentType === 'directory') {
             document.getElementById('dirFields').style.display = 'block';
         } else {
@@ -652,7 +672,7 @@
 
         const desc = document.getElementById('mDesc').value;
         if (!desc) return alert("Enter description");
-        const newId = "NEW-" + Math.floor(Math.random() * 999);
+        const newId = (currentType === 'changes' ? "CHG-" : "NEW-") + Math.floor(Math.random() * 999);
         let newTask = {};
 
         if (currentType === 'risks') {
@@ -668,6 +688,14 @@
             const lead = document.getElementById('mLead').value; const start = document.getElementById('mStart').value; const dur = document.getElementById('mDur').value;
             newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": lead, "startdate": start, "duration": dur, "status": "Not Started" };
             db.programme.push(newTask);
+            
+        } else if (currentType === 'changes') {
+            const req = document.getElementById('mChangeReq').value; const date = document.getElementById('mChangeDate').value; 
+            const cost = document.getElementById('mChangeCost').value; const time = document.getElementById('mChangeTime').value;
+            const fund = document.getElementById('mChangeFund').value; const status = document.getElementById('mChangeStatus').value;
+            
+            newTask = { "no": newId, "description": desc, "ward": currentWard, "requestor": req, "date": date, "cost": cost, "time": time, "fundingsource": fund, "status": status };
+            db.changes.push(newTask);
 
         } else {
             const who = document.getElementById('mWho').value; const due = document.getElementById('mDue').value; const status = document.getElementById('mStatus').value;
@@ -700,7 +728,7 @@
     }
 </script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
-    <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
+    <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
         <h2 id="modalTitle" style="margin-top:0;">Add New Item</h2>
         
         <div id="standardDescField">
@@ -754,6 +782,32 @@
                     <select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select>
                 </div>
             </div>
+        </div>
+
+        <div id="changeFields" style="display:none;">
+            <label style="display:block; margin-top:10px; font-weight:bold;">Requestor</label>
+            <select id="mChangeReq" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></select>
+            <label style="display:block; margin-top:10px; font-weight:bold;">Date Requested</label>
+            <input type="date" id="mChangeDate" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Cost Impact (£)</label>
+                    <input type="number" id="mChangeCost" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Time Impact (Days)</label>
+                    <input type="number" id="mChangeTime" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                </div>
+            </div>
+            <label style="display:block; margin-top:10px; font-weight:bold;">Funding Source</label>
+            <input type="text" id="mChangeFund" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+            <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
+            <select id="mChangeStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                <option value="Pending">Pending</option>
+                <option value="Instructed">Instructed</option>
+                <option value="Refused">Refused</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
         </div>
 
         <div id="dirFields" style="display:none;">
