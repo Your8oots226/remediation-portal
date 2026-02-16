@@ -101,6 +101,34 @@
                 <input type="file" id="loadInput" style="display:none;" accept=".json" onchange="uploadData(event)">
             </div>
         </div>
+
+        <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📄</div><h3>Scope Builder</h3><p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
+            </div>
+            <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">🚧</div><h3>Enablers</h3><p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
+            </div>
+            <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📦</div><h3>Ward Moves</h3><p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
+            </div>
+            <div class="card" onclick="showModule('programme')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📅</div><h3>Programme</h3><p style="color:#64748b; font-size:0.9rem;">Activities & Milestones</p>
+            </div>
+            <div class="card" onclick="showModule('risks')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div><h3>Risk Register</h3><p style="color:#64748b; font-size:0.9rem;">Risks, Issues & Mitigations</p>
+            </div>
+            <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
+            </div>
+            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3>Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Key Risks</p>
+            </div>
+        </div>
+    </div>
+</div>
 <div id="view-new-project" class="view" style="display:none;">
     <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
         <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Create New Project</h2>
@@ -146,33 +174,6 @@
         </div>
     </div>
 </div>
-        <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-            <div class="card" onclick="showModule('brief')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📄</div><h3>Scope Builder</h3><p style="color:#64748b; font-size:0.9rem;">Construction Brief & Room Data</p>
-            </div>
-            <div class="card" onclick="showModule('enablers')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">🚧</div><h3>Enablers</h3><p style="color:#64748b; font-size:0.9rem;">Estates & Pre-Works Tasks</p>
-            </div>
-            <div class="card" onclick="showModule('moves')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📦</div><h3>Ward Moves</h3><p style="color:#64748b; font-size:0.9rem;">Operational & Clinical Moves</p>
-            </div>
-            <div class="card" onclick="showModule('programme')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📅</div><h3>Programme</h3><p style="color:#64748b; font-size:0.9rem;">Activities & Milestones</p>
-            </div>
-            <div class="card" onclick="showModule('risks')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">⚠️</div><h3>Risk Register</h3><p style="color:#64748b; font-size:0.9rem;">Risks, Issues & Mitigations</p>
-            </div>
-            <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
-            </div>
-            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3>Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Key Risks</p>
-            </div>
-        </div>
-    </div>
-</div>
 
         <div id="view-menu" class="view">
             <button class="btn" style="background:#64748b" onclick="switchView('view-home')">← Back</button>
@@ -190,7 +191,6 @@
         </div>
     <script>
 // 1. DATABASE & CONFIG
-    // Note: We changed 'equipment' to 'equipLibrary' so it only acts as a dictionary, not a task list.
     let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [], equipLibrary: [] };
     let currentWard = "";
     let currentType = "";
@@ -234,6 +234,8 @@
     function switchView(id) {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+        // Specific reset if navigating back to home
+        if (id === 'view-home') renderHome();
     }
 
     function selectWard(name) {
@@ -244,13 +246,59 @@
         switchView('view-menu');
     }
 
+    // UPDATED: Renders Excel projects + Manually created projects + Add New button
     function renderHome() {
         const list = document.getElementById('deptList');
         if (!list) return;
-        list.innerHTML = db.depts.map(d => {
-            const name = findVal(d, 'ward') || findVal(d, 'department') || findVal(d, 'departmentalname') || "Unnamed";
-            return `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`;
-        }).join('');
+        
+        // 1. Get projects loaded from Excel
+        const excelProjects = db.depts.map(d => findVal(d, 'ward') || findVal(d, 'department') || findVal(d, 'departmentalname') || "Unnamed").filter(Boolean);
+        
+        // 2. Get manually created projects (filtering out system variables)
+        const customProjects = Object.keys(wardData).filter(k => 
+            k !== 'GLOBAL_DIR' && 
+            k !== 'GLOBAL_DIR_NOTES' && 
+            !excelProjects.includes(k)
+        );
+
+        const allProjects = [...new Set([...excelProjects, ...customProjects])].sort();
+
+        let html = allProjects.map(name => `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`).join('');
+        
+        // 3. The persistent "Add New Project" button
+        html += `
+            <div class="card" onclick="switchView('view-new-project')" style="background:#f8fafc; border:2px dashed #94a3b8; box-shadow:none; cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <div style="font-size:2rem; margin-bottom:10px; color:#3b82f6;">+</div>
+                <h3 style="color:#3b82f6; margin:0;">Add New Project</h3>
+            </div>
+        `;
+        
+        list.innerHTML = html;
+    }
+
+    // NEW: Save the project and baseline data
+    function saveNewProject() {
+        const name = document.getElementById('npName').value.trim();
+        if (!name) return alert("Please enter a Project Name.");
+        
+        if (!wardData[name]) wardData[name] = {};
+
+        // Save baseline configuration data into the project's memory
+        wardData[name]['baseline_budget'] = document.getElementById('npBudget').value;
+        wardData[name]['baseline_prog'] = document.getElementById('npProg').value;
+        wardData[name]['ms_briefing'] = document.getElementById('npMsBriefing').value;
+        wardData[name]['ms_design'] = document.getElementById('npMsDesign').value;
+        wardData[name]['ms_costing'] = document.getElementById('npMsCosting').value;
+        wardData[name]['ms_delivery'] = document.getElementById('npMsDelivery').value;
+
+        localStorage.setItem('wardData', JSON.stringify(wardData));
+        
+        // Clear the form for next time
+        document.getElementById('npName').value = '';
+        ['npBudget', 'npProg', 'npMsBriefing', 'npMsDesign', 'npMsCosting', 'npMsDelivery'].forEach(id => document.getElementById(id).value = '');
+
+        // Drop the user right into their new project's module menu
+        selectWard(name);
     }
 
     // --- HELPERS ---
@@ -460,11 +508,10 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:8px 6px; font-size:0.85rem; background:#1e293b; color:white; font-weight:bold; margin-top:10px;"><div></div><div>TOTALS (Pending & Instructed)</div><div></div><div></div><div style="color:#fecaca;">£${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div></div><div style="color:#fecaca;">${totalTime} Days</div><div></div><div></div></div>`;
         }
 
-        // --- F. EQUIPMENT AUDIT MODULE (CLEAN SLATE & AUTOCOMPLETE LIBRARY) ---
+        // --- F. EQUIPMENT AUDIT MODULE ---
         else if (type === 'equipment') {
             body.innerHTML = navButtons + pdfHeader;
             
-            // 1. Datalists ONLY pull from the Excel Library and custom added rooms
             const allDesc = [...new Set(db.equipLibrary.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort();
             const excelRooms = [...new Set(db.equipLibrary.map(item => findVal(item, 'room') || findVal(item, 'roomname') || findVal(item, 'roomnumber')))].filter(Boolean);
             if (!wardData[currentWard]) wardData[currentWard] = {};
@@ -474,7 +521,6 @@
             document.getElementById('dl-desc').innerHTML = allDesc.map(d => `<option value="${d}">`).join('');
             document.getElementById('dl-room').innerHTML = allEqRooms.map(r => `<option value="${r}">`).join('');
 
-            // 2. The Actual Tasks are NOW ONLY pulled from the user's saved data
             const tasks = wardData[currentWard]['equipmentLog'] || [];
 
             let controlsHtml = `
@@ -497,7 +543,6 @@
                 </div>`;
             body.innerHTML += controlsHtml;
 
-            // Map the tasks allowing for inline edits
             let mappedTasks = tasks.map(t => {
                 const id = t.id;
                 const desc = (wardData[currentWard][id + '_desc'] !== undefined) ? wardData[currentWard][id + '_desc'] : t.desc;
@@ -509,15 +554,10 @@
                 return { id, desc, room, group, loc, action, notes };
             });
 
-            if (equipCurrentRoom !== 'All') {
-                mappedTasks = mappedTasks.filter(t => t.room === equipCurrentRoom);
-            }
+            if (equipCurrentRoom !== 'All') mappedTasks = mappedTasks.filter(t => t.room === equipCurrentRoom);
 
-            if (equipSortBy === 'room') {
-                mappedTasks.sort((a, b) => a.room.localeCompare(b.room) || a.desc.localeCompare(b.desc));
-            } else {
-                mappedTasks.sort((a, b) => a.desc.localeCompare(b.desc));
-            }
+            if (equipSortBy === 'room') mappedTasks.sort((a, b) => a.room.localeCompare(b.room) || a.desc.localeCompare(b.desc));
+            else mappedTasks.sort((a, b) => a.desc.localeCompare(b.desc));
 
             let lastRoomRendered = null;
             let rowsHtml = "";
@@ -871,7 +911,6 @@
             db.changes.push(newTask);
             
         } else if (currentType === 'equipment') {
-            // NEW: Only push items to the user's local data storage, ignoring the Excel Library array
             const room = document.getElementById('mEquipRoom').value; const group = document.getElementById('mEquipGroup').value;
             const loc = document.getElementById('mEquipLoc').value; const action = document.getElementById('mEquipAction').value;
             
