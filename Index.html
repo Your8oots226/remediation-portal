@@ -54,45 +54,57 @@
     <div id="view-new-project" class="view">
         <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
             <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Create New Project</h2>
-            
             <label style="display:block; margin-top:15px; font-weight:bold; color:#334155;">Project Name</label>
             <input type="text" id="npName" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. Ward 4 Refurbishment">
-            
             <div style="display:flex; gap:15px; margin-top:20px;">
                 <div style="flex:1;">
                     <label style="display:block; font-weight:bold; color:#334155;">Baseline Budget (£)</label>
-                    <input type="number" id="npBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. 500000">
+                    <input type="number" id="npBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;">
                 </div>
                 <div style="flex:1;">
                     <label style="display:block; font-weight:bold; color:#334155;">Baseline Programme</label>
-                    <input type="text" id="npProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. 12 Weeks">
+                    <input type="text" id="npProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;">
                 </div>
             </div>
-
             <h3 style="margin-top:30px; color:#334155; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">Key Milestones</h3>
-            
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                <div>
-                    <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Briefing</label>
-                    <input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
-                </div>
-                <div>
-                    <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Design</label>
-                    <input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
-                </div>
-                <div>
-                    <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Costing</label>
-                    <input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
-                </div>
-                <div>
-                    <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Delivery</label>
-                    <input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
-                </div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Briefing</label><input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Design</label><input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Costing</label><input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Delivery</label><input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
             </div>
-
             <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;">
                 <button class="btn" onclick="switchView('view-home'); document.getElementById('npName').value='';" style="background:#64748b; padding:10px 20px;">Cancel</button>
                 <button class="btn" onclick="saveNewProject()" style="background:#10b981; padding:10px 20px;">Create Project</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-edit-project" class="view">
+        <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+            <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Update Project Information</h2>
+            <label style="display:block; margin-top:15px; font-weight:bold; color:#334155;">Project Name</label>
+            <input type="text" id="epName" disabled style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem; background:#f1f5f9; color:#64748b;">
+            <div style="display:flex; gap:15px; margin-top:20px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-weight:bold; color:#334155;">Baseline Budget (£)</label>
+                    <input type="number" id="epBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;">
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-weight:bold; color:#334155;">Baseline Programme</label>
+                    <input type="text" id="epProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;">
+                </div>
+            </div>
+            <h3 style="margin-top:30px; color:#334155; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">Key Milestones</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Briefing</label><input type="date" id="epMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Design</label><input type="date" id="epMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Costing</label><input type="date" id="epMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Delivery</label><input type="date" id="epMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+            </div>
+            <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;">
+                <button class="btn" onclick="switchView('view-menu')" style="background:#64748b; padding:10px 20px;">Cancel</button>
+                <button class="btn" onclick="saveProjectInfo()" style="background:#f59e0b; padding:10px 20px;">Save Updates</button>
             </div>
         </div>
     </div>
@@ -103,6 +115,7 @@
             <div class="no-print" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
                 <button class="btn" style="background:#64748b;" onclick="switchView('view-home')">← Back to Projects</button>
                 <div style="display:flex; gap:10px;">
+                    <button class="btn" style="background:#f59e0b;" onclick="editProjectInfo()">✏️ Update Info</button>
                     <button class="btn" style="background:#ef4444;" onclick="deleteCurrentProject()">🗑️ Delete Project</button>
                     <button class="btn" style="background:#3b82f6;" onclick="downloadData()">⬇ Save Project</button>
                     <button class="btn" style="background:#8b5cf6;" onclick="document.getElementById('loadInput').click()">⬆ Load Project</button>
@@ -369,9 +382,9 @@
             const projRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; });
             projRisks.forEach(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
-                const savedImp = (wardData[proj] && wardData[proj][id + '_imp']) || findVal(t, 'impact') || "1";
-                const savedProb = (wardData[proj] && wardData[proj][id + '_prob']) || findVal(t, 'prob') || "1";
-                const score = (parseInt(savedImp) || 1) * (parseInt(savedProb) || 1);
+                const savedImp = parseInt((wardData[proj] && wardData[proj][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
+                const savedProb = parseInt((wardData[proj] && wardData[proj][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
+                const score = savedImp * savedProb;
                 if (score >= 12) totalRisks++;
             });
         });
@@ -440,6 +453,35 @@
         ['npBudget', 'npProg', 'npMsBriefing', 'npMsDesign', 'npMsCosting', 'npMsDelivery'].forEach(id => document.getElementById(id).value = '');
 
         selectWard(name);
+    }
+
+    // NEW: Edit Project Info Functions
+    function editProjectInfo() {
+        if (!wardData[currentWard]) wardData[currentWard] = {};
+        
+        document.getElementById('epName').value = currentWard;
+        document.getElementById('epBudget').value = wardData[currentWard]['baseline_budget'] || '';
+        document.getElementById('epProg').value = wardData[currentWard]['baseline_prog'] || '';
+        document.getElementById('epMsBriefing').value = wardData[currentWard]['ms_briefing'] || '';
+        document.getElementById('epMsDesign').value = wardData[currentWard]['ms_design'] || '';
+        document.getElementById('epMsCosting').value = wardData[currentWard]['ms_costing'] || '';
+        document.getElementById('epMsDelivery').value = wardData[currentWard]['ms_delivery'] || '';
+        
+        switchView('view-edit-project');
+    }
+
+    function saveProjectInfo() {
+        if (!wardData[currentWard]) wardData[currentWard] = {};
+        
+        wardData[currentWard]['baseline_budget'] = document.getElementById('epBudget').value;
+        wardData[currentWard]['baseline_prog'] = document.getElementById('epProg').value;
+        wardData[currentWard]['ms_briefing'] = document.getElementById('epMsBriefing').value;
+        wardData[currentWard]['ms_design'] = document.getElementById('epMsDesign').value;
+        wardData[currentWard]['ms_costing'] = document.getElementById('epMsCosting').value;
+        wardData[currentWard]['ms_delivery'] = document.getElementById('epMsDelivery').value;
+
+        localStorage.setItem('wardData', JSON.stringify(wardData));
+        switchView('view-menu');
     }
 
     // --- HELPERS ---
@@ -515,19 +557,21 @@
 
         document.getElementById('moduleTitle').innerText = subTitle;
 
-        // --- A. SCOPE BUILDER ---
+        // --- A. SCOPE BUILDER (CLEANED) ---
         if (type === 'brief') {
             body.innerHTML = navButtons + pdfHeader;
             const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
             const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
+            
             cats.forEach(cat => {
                 const items = db.library.filter(i => getCat(i) === cat);
                 let rows = items.map(i => {
                     const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                     const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
-                    return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 40% 60%; gap:10px; padding:4px 0; border-bottom:1px solid #e2e8f0; align-items:start;"><div style="font-size:0.8rem; line-height:1.3; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; font-size:0.8rem; padding:6px; border:1px solid #cbd5e1; width:100%; resize:none; box-sizing:border-box;" placeholder="Notes..." oninput="autoResize(this); saveComment('${desc}', this.value)">${saved}</textarea></div>`;
+                    let isFilled = saved.trim() !== "" ? "border-left: 3px solid #10b981;" : "border-left: 3px solid transparent;";
+                    return `<div class="lib-row" style="page-break-inside:avoid; display:flex; gap:15px; padding:10px 15px; border-bottom:1px solid #f1f5f9; align-items:start; ${isFilled} background:white; transition:background 0.2s;"><div style="font-size:0.85rem; line-height:1.4; font-weight:600; color:#334155; width:40%; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:36px; height:36px; overflow-y:hidden; font-size:0.8rem; padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; width:60%; resize:none; box-sizing:border-box; background:#f8fafc;" placeholder="Enter scope notes, requirements, or NA..." oninput="autoResize(this); saveComment('${desc}', this.value); if(this.value.trim() !== '') { this.parentElement.style.borderLeft = '3px solid #10b981'; } else { this.parentElement.style.borderLeft = '3px solid transparent'; }">${saved}</textarea></div>`;
                 }).join('');
-                body.innerHTML += `<div class="scope-category" style="margin-bottom:15px; page-break-inside:avoid;"><div class="row-header" style="background:#f1f5f9; color:#334155; padding:5px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-bottom:5px; page-break-inside:avoid;">${cat}</div>${rows}</div>`;
+                body.innerHTML += `<div class="scope-category" style="margin-bottom:20px; page-break-inside:avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02);"><div class="row-header" style="background:#f8fafc; color:#1e293b; padding:12px 15px; font-size:0.9rem; font-weight:bold; border-bottom:1px solid #e2e8f0;">📂 ${cat}</div>${rows}</div>`;
             });
         }
         
@@ -546,27 +590,39 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div></div>${rows}`;
         }
         
-        // --- C. RISK REGISTER ---
+        // --- C. RISK REGISTER (SORTED & DEFAULTED) ---
         else if (type === 'risks') { 
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             const riskTypes = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'];
-            let rows = tasks.map(t => {
+            
+            // Map and calculate scores (Defaulting to 1)
+            let mappedTasks = tasks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                 const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
-                const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
-                const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
+                const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
+                const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
-                const score = (parseInt(savedImp) || 1) * (parseInt(savedProb) || 1);
-                let colorClass = ""; let scoreColor = "#64748b"; 
-                if (score >= 15) { colorClass = "background-color:#fee2e2;"; scoreColor = "#ef4444"; } 
-                else if (score >= 8) { colorClass = "background-color:#fef9c3;"; scoreColor = "#d97706"; }
+                const score = savedImp * savedProb;
+                return { id, desc, savedType, savedImp, savedProb, score, savedMit };
+            });
+
+            // Sort by Score (Highest to Lowest)
+            mappedTasks.sort((a, b) => b.score - a.score);
+
+            let rows = mappedTasks.map(t => {
+                let colorClass = ""; let scoreColor = "#64748b"; let borderL = "border-left: 4px solid #cbd5e1;";
+                if (t.score >= 15) { colorClass = "background-color:#fff1f2;"; scoreColor = "#ef4444"; borderL = "border-left: 4px solid #ef4444;"; } 
+                else if (t.score >= 8) { colorClass = "background-color:#fffbeb;"; scoreColor = "#d97706"; borderL = "border-left: 4px solid #f59e0b;"; }
+                else if (t.score > 0) { borderL = "border-left: 4px solid #10b981;"; }
+
                 const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
-                const ddHtml = riskTypes.map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
-                return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; align-items:start; ${colorClass} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div><div style="font-size:0.8rem; font-weight:bold; padding-top:8px;">${desc}</div><div style="position:relative; margin-top:4px;"><div id="label_${id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #ccc; background:white; font-size:0.75rem; padding:4px; border-radius:4px; cursor:pointer; min-height:26px;">${savedType || "Select..."}</div><div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; z-index:50; padding:4px;" onmouseleave="this.style.display='none'">${ddHtml}</div></div><div><select onchange="saveComment('${id}_imp', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedImp)}</select></div><div><select onchange="saveComment('${id}_prob', this.value); showModule('risks')" style="border:1px solid #ccc; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:4px;">${makeOpts(savedProb)}</select></div><div style="font-size:0.8rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${score}</div><textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedMit}</textarea></div>`;
+                const ddHtml = riskTypes.map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${t.savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${t.id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
+                
+                return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; align-items:start; ${colorClass} ${borderL} padding:6px 10px; border-bottom:1px solid #e2e8f0; min-height:40px; margin-bottom:4px; border-radius:0 4px 4px 0;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div style="font-size:0.85rem; font-weight:bold; color:#1e293b; padding-top:6px;">${t.desc}</div><div style="position:relative; margin-top:4px;"><div id="label_${t.id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; padding:6px; border-radius:4px; cursor:pointer; min-height:26px;">${t.savedType || "Select Type..."}</div><div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:50; padding:6px; border-radius:4px;" onmouseleave="this.style.display='none'">${ddHtml}</div></div><div><select onchange="saveComment('${t.id}_imp', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedImp)}</select></div><div><select onchange="saveComment('${t.id}_prob', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedProb)}</select></div><div style="font-size:1.1rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${t.score}</div><textarea class="comment-input" style="min-height:34px; height:34px; overflow-y:hidden; resize:none; font-size:0.8rem; padding:8px; border:1px solid #cbd5e1; border-radius:4px; width:100%; box-sizing:border-box;" placeholder="Add mitigations..." oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.savedMit}</textarea></div>`;
             }).join('');
-            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div>Score</div><div>Mitigating Action/s</div></div>${rows}`;
+            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; padding:10px; font-size:0.8rem; background:#1e293b; color:white; border-radius:6px; margin-bottom:10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${rows}`;
         }
         
         // --- D. PROGRAMME MODULE (WITH GANTT CHART) ---
@@ -574,7 +630,6 @@
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             
-            // 1. Build the Gantt Chart based on current input data
             let validTasks = tasks.map(t => {
                 const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
                 const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
@@ -596,7 +651,7 @@
                 let barsHtml = validTasks.map(t => {
                     let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
-                    if (width < 2) width = 2; // Keep minimum visual width for 1-day tasks
+                    if (width < 2) width = 2; 
                     if (left + width > 100) width = 100 - left;
                     
                     let barColor = "#94a3b8"; 
@@ -611,7 +666,6 @@
             }
             body.innerHTML += ganttHtml;
 
-            // 2. Build the standard entry table
             let rows = tasks.map(t => {
                 const id = findVal(t, 'activityid') || findVal(t, 'id') || "A";
                 const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
@@ -863,9 +917,9 @@
             let scoredRisks = wardRisks.map(t => {
                 const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                 const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
-                const savedImp = (wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1";
-                const savedProb = (wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1";
-                const score = (parseInt(savedImp) || 1) * (parseInt(savedProb) || 1);
+                const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
+                const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
+                const score = savedImp * savedProb;
                 const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
                 return { id, desc, score, savedMit };
             });
