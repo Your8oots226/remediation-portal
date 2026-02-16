@@ -332,7 +332,7 @@
         switchView('view-menu');
     }
 
-    // UPDATED: Render Home Screen & filter out deleted projects
+    // UPDATED: Render Home Screen with Global Portfolio Dashboard
     function renderHome() {
         const list = document.getElementById('deptList');
         if (!list) return;
@@ -347,7 +347,67 @@
 
         const allProjects = [...new Set([...excelProjects, ...customProjects])].sort();
 
-        let html = allProjects.map(name => `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`).join('');
+        // --- GLOBAL PORTFOLIO MATH ---
+        let totalBase = 0;
+        let totalCur = 0;
+        let totalRisks = 0;
+
+        allProjects.forEach(proj => {
+            // 1. Budget Baseline
+            let pBase = parseFloat(wardData[proj] && wardData[proj]['baseline_budget']) || 0;
+            totalBase += pBase;
+
+            // 2. Budget Changes
+            let pChanges = 0;
+            const projChanges = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; });
+            projChanges.forEach(t => {
+                const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
+                const savedCost = (wardData[proj] && wardData[proj][id + '_cost']) !== undefined ? wardData[proj][id + '_cost'] : findVal(t, 'cost£') || findVal(t, 'cost') || "";
+                const savedStatus = (wardData[proj] && wardData[proj][id + '_status']) || findVal(t, 'status') || "Pending";
+                if (savedStatus === 'Instructed' || savedStatus === 'Pending') {
+                    pChanges += parseFloat(savedCost) || 0;
+                }
+            });
+            totalCur += (pBase + pChanges);
+
+            // 3. High Risks
+            const projRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; });
+            projRisks.forEach(t => {
+                const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
+                const savedImp = (wardData[proj] && wardData[proj][id + '_imp']) || findVal(t, 'impact') || "1";
+                const savedProb = (wardData[proj] && wardData[proj][id + '_prob']) || findVal(t, 'prob') || "1";
+                const score = (parseInt(savedImp) || 1) * (parseInt(savedProb) || 1);
+                if (score >= 12) totalRisks++;
+            });
+        });
+
+        let varCost = totalCur - totalBase;
+        let varColor = varCost > 0 ? '#ef4444' : '#10b981';
+        let varSign = varCost > 0 ? '+' : '';
+
+        // --- DASHBOARD UI ---
+        let dashHtml = `
+            <div style="width:100%; margin-bottom:20px; background:white; padding:25px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); display:flex; flex-wrap:wrap; gap:20px; justify-content:space-between; text-align:left; border:1px solid #e2e8f0;">
+                <div style="flex:1; min-width:180px; border-right:1px solid #e2e8f0; padding-right:15px;">
+                    <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase;">Total Portfolio Budget</div>
+                    <div style="font-size:2rem; color:#1e293b; font-weight:bold; margin-top:5px;">£${totalBase.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>
+                </div>
+                <div style="flex:1; min-width:180px; border-right:1px solid #e2e8f0; padding-right:15px;">
+                    <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase;">Current Forecast</div>
+                    <div style="font-size:2rem; color:#1e293b; font-weight:bold; margin-top:5px;">£${totalCur.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>
+                </div>
+                <div style="flex:1; min-width:180px; border-right:1px solid #e2e8f0; padding-right:15px;">
+                    <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase;">Net Variance</div>
+                    <div style="font-size:2rem; color:${varColor}; font-weight:bold; margin-top:5px;">${varSign}£${varCost.toLocaleString(undefined, {minimumFractionDigits:0, maximumFractionDigits:0})}</div>
+                </div>
+                <div style="flex:1; min-width:180px;">
+                    <div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase;">Critical Risks (Score 12+)</div>
+                    <div style="font-size:2rem; color:${totalRisks > 0 ? '#ef4444' : '#10b981'}; font-weight:bold; margin-top:5px;">${totalRisks}</div>
+                </div>
+            </div>
+        `;
+
+        let html = dashHtml + allProjects.map(name => `<div class="card" onclick="selectWard('${name}')"><h3>${name}</h3></div>`).join('');
         
         html += `
             <div class="card" onclick="switchView('view-new-project')" style="background:#f8fafc; border:2px dashed #94a3b8; box-shadow:none; cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s; display:flex; flex-direction:column; justify-content:center; align-items:center;">
