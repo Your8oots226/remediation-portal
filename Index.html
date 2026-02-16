@@ -43,7 +43,8 @@
             <input type="file" id="fileIn" style="display:none;" onchange="handleFile(event)">
             <input type="text" id="wardSearch" class="search-input" placeholder="Search wards..." onkeyup="filterWards()">
             <div id="deptList" class="dept-grid"></div>
-        <div id="view-menu" class="view">
+        </div>
+    <div id="view-menu" class="view">
     <div style="max-width:900px; margin:0 auto;">
         
         <div class="no-print" style="display:flex; justify-content:space-between; margin-bottom:20px; align-items:center;">
@@ -76,8 +77,8 @@
             <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
                 <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
             </div>
-            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
-                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3>Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Key Risks</p>
+            <div class="card" onclick="showModule('reports')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s; background:#f8fafc; border:2px dashed #cbd5e1;">
+                <div style="font-size:2rem; margin-bottom:10px;">📊</div><h3 style="color:#334155;">Monthly Report</h3><p style="color:#64748b; font-size:0.9rem;">Executive Overview & Top Risks</p>
             </div>
         </div>
     </div>
@@ -339,7 +340,7 @@
             body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
         }
         
-        // --- E. REPORTS MODULE ---
+        // --- E. REPORTS MODULE (NOW WITH GRAPHICAL TIMELINE) ---
         else if (type === 'reports') {
             body.innerHTML = navButtons + pdfHeader;
             
@@ -361,6 +362,7 @@
 
             // 3. GRAPHICAL PROGRAMME TIMELINE
             const progTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+            
             html += `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
                     <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Programme Timeline</h3>`;
@@ -389,13 +391,13 @@
                     let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
                     
-                    if (width < 2) width = 2; 
+                    if (width < 2) width = 2; // Ensure 1-day tasks are visible
                     if (left + width > 100) width = 100 - left;
                     
-                    let barColor = "#94a3b8"; 
-                    if (t.savedStatus === 'Complete') barColor = "#10b981"; 
-                    if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; 
-                    if (t.savedStatus === 'Late') barColor = "#ef4444"; 
+                    let barColor = "#94a3b8"; // Not Started (Gray)
+                    if (t.savedStatus === 'Complete') barColor = "#10b981"; // Green
+                    if (t.savedStatus === 'In Progress') barColor = "#3b82f6"; // Blue
+                    if (t.savedStatus === 'Late') barColor = "#ef4444"; // Red
 
                     return `
                         <div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;">
@@ -425,10 +427,10 @@
                     </div></div>`;
             }
 
-            // 4. Auto-Calculated High Risks (Score 12+)
+            // 4. Auto-Calculated Top 3 Risks
             html += `
                 <div style="margin-bottom:25px; page-break-inside:avoid;">
-                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Key Project Risks (Score 12+)</h3>`;
+                    <h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Top 3 Project Risks</h3>`;
             
             const wardRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             let scoredRisks = wardRisks.map(t => {
@@ -441,13 +443,13 @@
                 return { id, desc, score, savedMit };
             });
 
-            // Filtering for score >= 12 instead of just taking the top 3
-            const highRisks = scoredRisks.filter(r => r.score >= 12).sort((a, b) => b.score - a.score);
+            scoredRisks.sort((a, b) => b.score - a.score);
+            const top3 = scoredRisks.slice(0, 3);
 
-            if (highRisks.length === 0) {
-                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`;
+            if (top3.length === 0) {
+                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged for this ward.</p>`;
             } else {
-                let riskRows = highRisks.map(r => {
+                let riskRows = top3.map(r => {
                     let colorClass = ""; let scoreColor = "#64748b"; 
                     if (r.score >= 15) { colorClass = "background-color:#fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#ef4444"; } 
                     else if (r.score >= 8) { colorClass = "background-color:#fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; scoreColor = "#d97706"; }
@@ -684,6 +686,7 @@
             catch (err) { alert("Error loading file. Make sure it is a valid .json backup."); }
         }; reader.readAsText(file);
     }
+</script>
 <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2);">
         <h2 id="modalTitle" style="margin-top:0;">Add New Item</h2>
