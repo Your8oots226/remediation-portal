@@ -77,6 +77,9 @@
             <div class="card" onclick="showModule('changes')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
                 <div style="font-size:2rem; margin-bottom:10px;">🔄</div><h3>Change Control</h3><p style="color:#64748b; font-size:0.9rem;">Scope & Cost Variations</p>
             </div>
+            <div class="card" onclick="showModule('equipment')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
+                <div style="font-size:2rem; margin-bottom:10px;">🛏️</div><h3>Equipment Audit</h3><p style="color:#64748b; font-size:0.9rem;">Assets, Storage & Shortfalls</p>
+            </div>
             <div class="card" onclick="showModule('directory')" style="cursor:pointer; text-align:center; padding:30px; transition:transform 0.2s;">
                 <div style="font-size:2rem; margin-bottom:10px;">👥</div><h3>Project Directory</h3><p style="color:#64748b; font-size:0.9rem;">Stakeholders & Contacts</p>
             </div>
@@ -143,7 +146,7 @@
         </div>
     <script>
 // 1. DATABASE & CONFIG
-    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [] };
+    let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [], equipment: [] };
     let currentWard = "";
     let currentType = "";
     let wardData = JSON.parse(localStorage.getItem('wardData')) || {};
@@ -170,6 +173,7 @@
                 db.risks = getSheet('risk'); 
                 db.directory = getSheet('directory') || getSheet('contacts') || []; 
                 db.changes = getSheet('change'); 
+                db.equipment = getSheet('equipment') || getSheet('audit') || getSheet('asset') || [];
 
                 renderHome();
             } catch (err) { console.error(err); alert("File Load Error"); }
@@ -253,6 +257,7 @@
         else if (type === 'programme') { headerTitle += " Programme"; subTitle = "Activities & Milestones"; }
         else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; }
         else if (type === 'changes') { headerTitle += " Change Control"; subTitle = "Scope & Cost Variations"; }
+        else if (type === 'equipment') { headerTitle += " Equipment Audit"; subTitle = "Assets, Storage & Shortfalls"; }
         else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; }
         else if (type === 'reports') { headerTitle += " Monthly Report"; subTitle = "Executive Overview"; }
 
@@ -370,8 +375,7 @@
             body.innerHTML = navButtons + pdfHeader;
             const tasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             
-            let totalCost = 0;
-            let totalTime = 0;
+            let totalCost = 0; let totalTime = 0;
 
             let rows = tasks.map(t => {
                 const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
@@ -422,15 +426,58 @@
                 </div>`;
         }
 
-        // --- F. REPORTS MODULE (RE-ORDERED & UPDATED) ---
+        // --- F. NEW: EQUIPMENT AUDIT MODULE ---
+        else if (type === 'equipment') {
+            body.innerHTML = navButtons + pdfHeader;
+            const tasks = db.equipment.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+            
+            // Generate the dynamic datalists for Autocomplete by scanning all existing equipment descriptions and rooms
+            const allDesc = [...new Set(db.equipment.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort();
+            const allRooms = [...new Set(db.equipment.map(item => findVal(item, 'room') || findVal(item, 'roomname') || findVal(item, 'roomnumber')))].filter(Boolean).sort();
+            
+            document.getElementById('dl-desc').innerHTML = allDesc.map(d => `<option value="${d}">`).join('');
+            document.getElementById('dl-room').innerHTML = allRooms.map(r => `<option value="${r}">`).join('');
+
+            let rows = tasks.map(t => {
+                const id = findVal(t, 'uniqueid') || findVal(t, 'id') || "EQ";
+                const desc = findVal(t, 'description') || findVal(t, 'item') || "";
+                
+                // Allow dynamic overwriting via wardData if the user manually updates a cell
+                const savedRoom = (wardData[currentWard] && wardData[currentWard][id + '_room']) || findVal(t, 'room') || findVal(t, 'roomname') || "";
+                const savedGroup = (wardData[currentWard] && wardData[currentWard][id + '_group']) || findVal(t, 'groupno') || findVal(t, 'group') || "1";
+                const savedLoc = (wardData[currentWard] && wardData[currentWard][id + '_loc']) || findVal(t, 'location') || "";
+                const savedAction = (wardData[currentWard] && wardData[currentWard][id + '_action']) || findVal(t, 'action') || "Retain / Store";
+                const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'notes') || findVal(t, 'comments') || "";
+
+                const groupOptions = ['1', '2', '3'].map(opt => `<option value="${opt}" ${savedGroup === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                const actionOptions = ['Retain / Store', 'Dispose', 'Order Shortfall'].map(opt => `<option value="${opt}" ${savedAction === opt ? 'selected' : ''}>${opt}</option>`).join('');
+
+                let rowColor = "";
+                if (savedAction === 'Order Shortfall') rowColor = "background-color: #fee2e2;"; // Red highlight for things you need to buy
+                else if (savedAction === 'Dispose') rowColor = "background-color: #fef9c3;"; // Yellow for disposal
+
+                return `
+                    <div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.6fr 2fr 1.5fr 0.6fr 1.5fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;">
+                        <div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div>
+                        <div><input type="text" value="${desc}" list="dl-desc" onchange="saveComment('${id}_desc', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div>
+                        <div><input type="text" value="${savedRoom}" list="dl-room" onchange="saveComment('${id}_room', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div>
+                        <div><select onchange="saveComment('${id}_group', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${groupOptions}</select></div>
+                        <div><input type="text" value="${savedLoc}" onchange="saveComment('${id}_loc', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div>
+                        <div><select onchange="saveComment('${id}_action', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${actionOptions}</select></div>
+                        <textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea>
+                    </div>`;
+            }).join('');
+            
+            body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.6fr 2fr 1.5fr 0.6fr 1.5fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Description</div><div>Room</div><div>Group</div><div>Storage Location</div><div>Action</div><div>Notes</div></div>${rows}`;
+        }
+
+        // --- G. REPORTS MODULE ---
         else if (type === 'reports') {
             body.innerHTML = navButtons + pdfHeader;
             
-            // 1. Progress Status
             const savedProgress = (wardData[currentWard] && wardData[currentWard]['report_progress']) || "";
             let html = `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">1. Progress Status</h3><textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter monthly progress update here..." oninput="autoResize(this); saveComment('report_progress', this.value)">${savedProgress}</textarea></div>`;
 
-            // 2. Programme Timeline
             const progTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">2. Programme Timeline</h3>`;
             let validTasks = progTasks.map(t => {
@@ -466,7 +513,6 @@
                 html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:4px; background:white;"><div style="display:flex; margin-bottom:12px; font-size:0.7rem; color:#64748b; font-weight:bold;"><div style="width:35%;">Activity</div><div style="width:65%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;"><span>${formatDateGB(minDate)}</span><span>${formatDateGB(maxDate)}</span></div></div>${barsHtml}</div>`;
             }
 
-            // 3. Key Project Risks
             html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Key Project Risks (Score 12+)</h3>`;
             const wardRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             let scoredRisks = wardRisks.map(t => {
@@ -490,9 +536,7 @@
                 html += `<div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${riskRows}`;
             }
 
-            // 4. Impact of Changes
             html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Impact of Changes</h3>`;
-            
             const changeTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
             let totalReportCost = 0; let totalReportTime = 0;
             changeTasks.forEach(t => {
@@ -520,9 +564,7 @@
                     </div>
                 </div></div>`;
 
-            // 5. NEW: Changes in the Last Month (30-Day Auto Filter)
             html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">5. Changes in the Last Month</h3>`;
-            
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             
@@ -534,9 +576,8 @@
                 return cDate >= thirtyDaysAgo;
             });
 
-            if (recentChanges.length === 0) {
-                html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No changes requested in the last 30 days.</p>`;
-            } else {
+            if (recentChanges.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No changes requested in the last 30 days.</p>`; } 
+            else {
                 let chgRows = recentChanges.map(t => {
                     const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
                     const desc = findVal(t, 'description') || "";
@@ -544,38 +585,21 @@
                     const savedCost = (wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "0";
                     const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
                     const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || "";
-                    
                     let displayDate = "";
-                    if(savedDate) {
-                        const dObj = new Date(savedDate);
-                        displayDate = formatDateGB(dObj);
-                    }
-
+                    if(savedDate) { const dObj = new Date(savedDate); displayDate = formatDateGB(dObj); }
                     let colorClass = ""; 
                     if (savedStatus === 'Instructed') colorClass = "background-color:#dcfce7; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; 
                     else if (savedStatus === 'Refused' || savedStatus === 'Cancelled') colorClass = "background-color:#f1f5f9; color:#94a3b8; -webkit-print-color-adjust: exact; print-color-adjust: exact;";
 
-                    return `
-                        <div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;">
-                            <div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${id}</div>
-                            <div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${desc}</div>
-                            <div style="font-size:0.8rem; padding-top:4px;">${savedReq}</div>
-                            <div style="font-size:0.8rem; padding-top:4px;">${displayDate}</div>
-                            <div style="font-size:0.8rem; padding-top:4px; font-weight:bold;">£${parseFloat(savedCost||0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
-                            <div style="font-size:0.8rem; padding-top:4px;">${savedStatus}</div>
-                        </div>`;
+                    return `<div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${id}</div><div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${desc}</div><div style="font-size:0.8rem; padding-top:4px;">${savedReq}</div><div style="font-size:0.8rem; padding-top:4px;">${displayDate}</div><div style="font-size:0.8rem; padding-top:4px; font-weight:bold;">£${parseFloat(savedCost||0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div style="font-size:0.8rem; padding-top:4px;">${savedStatus}</div></div>`;
                 }).join('');
-
-                html += `
-                    <div style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                        <div>No.</div><div>Description</div><div>Requestor</div><div>Date</div><div>Cost Impact</div><div>Status</div>
-                    </div>${chgRows}`;
+                html += `<div style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>No.</div><div>Description</div><div>Requestor</div><div>Date</div><div>Cost Impact</div><div>Status</div></div>${chgRows}`;
             }
             html += `</div>`;
             body.innerHTML += html;
         }
 
-        // --- G. TASK TRACKERS (Enablers & Moves) ---
+        // --- H. TASK TRACKERS (Enablers & Moves) ---
         else {
             body.innerHTML = navButtons + pdfHeader;
             const sheetData = type === 'enablers' ? db.enablers : db.moves;
@@ -684,6 +708,7 @@
         document.getElementById('progFields').style.display = 'none';
         document.getElementById('riskFields').style.display = 'none';
         document.getElementById('changeFields').style.display = 'none';
+        document.getElementById('equipFields').style.display = 'none';
         document.getElementById('dirFields').style.display = 'none';
 
         if (currentType === 'risks') {
@@ -694,6 +719,10 @@
         } else if (currentType === 'changes') {
             document.getElementById('standardDescField').style.display = 'block'; document.getElementById('changeFields').style.display = 'block';
             document.getElementById('mChangeReq').innerHTML = getDirOptions('');
+        } else if (currentType === 'equipment') {
+            document.getElementById('standardDescField').style.display = 'block'; document.getElementById('equipFields').style.display = 'block';
+            // Clear inputs inside modal
+            document.getElementById('mEquipRoom').value = ''; document.getElementById('mEquipLoc').value = '';
         } else if (currentType === 'directory') {
             document.getElementById('dirFields').style.display = 'block';
         } else {
@@ -717,7 +746,13 @@
 
         const desc = document.getElementById('mDesc').value;
         if (!desc) return alert("Enter description");
-        const newId = (currentType === 'changes' ? "CHG-" : "NEW-") + Math.floor(Math.random() * 999);
+        
+        // Auto-Generate IDs (EQ- for equipment, CHG- for changes, NEW- for general tasks)
+        let prefix = "NEW-";
+        if (currentType === 'changes') prefix = "CHG-";
+        if (currentType === 'equipment') prefix = "EQ-";
+        const newId = prefix + Math.floor(Math.random() * 999);
+        
         let newTask = {};
 
         if (currentType === 'risks') {
@@ -738,9 +773,14 @@
             const req = document.getElementById('mChangeReq').value; const date = document.getElementById('mChangeDate').value; 
             const cost = document.getElementById('mChangeCost').value; const time = document.getElementById('mChangeTime').value;
             const fund = document.getElementById('mChangeFund').value; const status = document.getElementById('mChangeStatus').value;
-            
             newTask = { "no": newId, "description": desc, "ward": currentWard, "requestor": req, "date": date, "cost": cost, "time": time, "fundingsource": fund, "status": status };
             db.changes.push(newTask);
+            
+        } else if (currentType === 'equipment') {
+            const room = document.getElementById('mEquipRoom').value; const group = document.getElementById('mEquipGroup').value;
+            const loc = document.getElementById('mEquipLoc').value; const action = document.getElementById('mEquipAction').value;
+            newTask = { "uniqueid": newId, "description": desc, "ward": currentWard, "room": room, "groupno": group, "location": loc, "action": action };
+            db.equipment.push(newTask);
 
         } else {
             const who = document.getElementById('mWho').value; const due = document.getElementById('mDue').value; const status = document.getElementById('mStatus').value;
@@ -848,11 +888,34 @@
             <input type="text" id="mChangeFund" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
             <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
             <select id="mChangeStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <option value="Pending">Pending</option>
-                <option value="Instructed">Instructed</option>
-                <option value="Refused">Refused</option>
-                <option value="Cancelled">Cancelled</option>
+                <option value="Pending">Pending</option><option value="Instructed">Instructed</option>
+                <option value="Refused">Refused</option><option value="Cancelled">Cancelled</option>
             </select>
+        </div>
+
+        <div id="equipFields" style="display:none;">
+            <label style="display:block; margin-top:10px; font-weight:bold;">Room Name / Number</label>
+            <input type="text" id="mEquipRoom" list="dl-room" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;" placeholder="Start typing...">
+            
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Group No</label>
+                    <select id="mEquipGroup" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="1">Group 1</option><option value="2">Group 2</option><option value="3">Group 3</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; margin-top:10px; font-weight:bold;">Action</label>
+                    <select id="mEquipAction" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                        <option value="Retain / Store">Retain / Store</option>
+                        <option value="Dispose">Dispose</option>
+                        <option value="Order Shortfall">Order Shortfall</option>
+                    </select>
+                </div>
+            </div>
+
+            <label style="display:block; margin-top:10px; font-weight:bold;">Location (Storage/Destination)</label>
+            <input type="text" id="mEquipLoc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
         </div>
 
         <div id="dirFields" style="display:none;">
@@ -870,6 +933,9 @@
         </div>
     </div>
 </div>
+
+<datalist id="dl-desc"></datalist>
+<datalist id="dl-room"></datalist>
 
 </body>
 </html>
