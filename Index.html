@@ -101,7 +101,51 @@
                 <input type="file" id="loadInput" style="display:none;" accept=".json" onchange="uploadData(event)">
             </div>
         </div>
+<div id="view-new-project" class="view" style="display:none;">
+    <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+        <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Create New Project</h2>
+        
+        <label style="display:block; margin-top:15px; font-weight:bold; color:#334155;">Project Name</label>
+        <input type="text" id="npName" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. Ward 4 Refurbishment">
+        
+        <div style="display:flex; gap:15px; margin-top:20px;">
+            <div style="flex:1;">
+                <label style="display:block; font-weight:bold; color:#334155;">Baseline Budget (£)</label>
+                <input type="number" id="npBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. 500000">
+            </div>
+            <div style="flex:1;">
+                <label style="display:block; font-weight:bold; color:#334155;">Baseline Programme</label>
+                <input type="text" id="npProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; font-size:1rem;" placeholder="e.g. 12 Weeks">
+            </div>
+        </div>
 
+        <h3 style="margin-top:30px; color:#334155; font-size:1rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">Key Milestones</h3>
+        
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div>
+                <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Briefing</label>
+                <input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
+            </div>
+            <div>
+                <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Design</label>
+                <input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
+            </div>
+            <div>
+                <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Costing</label>
+                <input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
+            </div>
+            <div>
+                <label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem; color:#64748b;">Delivery</label>
+                <input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
+            </div>
+        </div>
+
+        <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;">
+            <button class="btn" onclick="switchView('view-home'); document.getElementById('npName').value='';" style="background:#64748b; padding:10px 20px;">Cancel</button>
+            <button class="btn" onclick="saveNewProject()" style="background:#10b981; padding:10px 20px;">Create Project</button>
+        </div>
+    </div>
+</div>
         <h1 id="deptHeading" style="margin-bottom:30px; color:var(--primary);"></h1>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
