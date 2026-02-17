@@ -245,8 +245,11 @@
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) wardData = snapshot.val();
                 
-                const activeTag = document.activeElement ? document.activeElement.tagName : '';
-                if (activeTag !== 'TEXTAREA' && activeTag !== 'INPUT' && activeTag !== 'SELECT') {
+                // SMART SAFETY LOCK: Pauses screen only if typing (ignores the Excel upload button)
+                const activeEl = document.activeElement;
+                const isTyping = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'file'));
+                
+                if (!isTyping) {
                     if (document.getElementById('view-content').classList.contains('active')) showModule(currentType);
                     else if (document.getElementById('view-menu').classList.contains('active')) selectWard(currentWard);
                     else if (document.getElementById('view-home').classList.contains('active')) renderHome();
