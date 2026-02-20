@@ -237,14 +237,14 @@
         let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
-        // REAL-TIME LISTENER (Only triggers when logged in)
+        // REAL-TIME LISTENER
         function startDatabaseSync() {
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) wardData = snapshot.val();
                 
-                // INJECT CLOUD-SAVED CUSTOM TASKS INTO LOCAL LISTS
+                // INJECT CLOUD-SAVED CUSTOM TASKS (Fixed Object Conversion Bug)
                 if (wardData['CUSTOM_ITEMS']) {
-                    wardData['CUSTOM_ITEMS'].forEach(ci => {
+                    Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => {
                         if (ci.type === 'risks' && !db.risks.find(t => (t.riskid||t.id) === ci.task.riskid)) db.risks.push(ci.task);
                         if (ci.type === 'programme' && !db.programme.find(t => (t.activityid||t.id) === ci.task.activityid)) db.programme.push(ci.task);
                         if (ci.type === 'changes' && !db.changes.find(t => (t.no||t.id) === ci.task.no)) db.changes.push(ci.task);
@@ -253,7 +253,7 @@
                     });
                 }
 
-                // SMART SAFETY LOCK: Pauses screen only if typing
+                // SMART SAFETY LOCK
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'file'));
                 
@@ -398,7 +398,8 @@
                         const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                         const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
                         let isFilled = saved.trim() !== "" ? "border-left: 3px solid #10b981;" : "border-left: 3px solid transparent;";
-                        return `<div class="lib-row" style="page-break-inside:avoid; display:flex; gap:15px; padding:10px 15px; border-bottom:1px solid #f1f5f9; align-items:start; ${isFilled} background:white; transition:background 0.2s;"><div style="font-size:0.85rem; line-height:1.4; font-weight:600; color:#334155; width:40%; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:36px; height:36px; overflow-y:hidden; font-size:0.8rem; padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; width:60%; resize:none; box-sizing:border-box; background:#f8fafc;" placeholder="Enter scope notes..." oninput="autoResize(this); saveComment('${desc}', this.value); if(this.value.trim() !== '') { this.parentElement.style.borderLeft = '3px solid #10b981'; } else { this.parentElement.style.borderLeft = '3px solid transparent'; }">${saved}</textarea></div>`;
+                        const safeDesc = desc.replace(/'/g, "\\'").replace(/"/g, '&quot;'); // Fixes scope strings with quotes breaking HTML
+                        return `<div class="lib-row" style="page-break-inside:avoid; display:flex; gap:15px; padding:10px 15px; border-bottom:1px solid #f1f5f9; align-items:start; ${isFilled} background:white; transition:background 0.2s;"><div style="font-size:0.85rem; line-height:1.4; font-weight:600; color:#334155; width:40%; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:36px; height:36px; overflow-y:hidden; font-size:0.8rem; padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; width:60%; resize:none; box-sizing:border-box; background:#f8fafc;" placeholder="Enter scope notes..." oninput="autoResize(this); saveComment('${safeDesc}', this.value); if(this.value.trim() !== '') { this.parentElement.style.borderLeft = '3px solid #10b981'; } else { this.parentElement.style.borderLeft = '3px solid transparent'; }">${saved}</textarea></div>`;
                     }).join('');
                     body.innerHTML += `<div class="scope-category" style="margin-bottom:20px; page-break-inside:avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02);"><div class="row-header" style="background:#f8fafc; color:#1e293b; padding:12px 15px; font-size:0.9rem; font-weight:bold; border-bottom:1px solid #e2e8f0;">📂 ${cat}</div>${rows}</div>`;
                 });
@@ -499,15 +500,21 @@
             else if (type === 'equipment') {
                 body.innerHTML = navButtons + pdfHeader;
                 if (!wardData[currentWard]) wardData[currentWard] = {};
-                const excelRooms = [...new Set(db.equipLibrary.map(item => findVal(item, 'room') || findVal(item, 'roomname') || findVal(item, 'roomnumber')))].filter(Boolean);
-                const allEqRooms = [...new Set([...excelRooms, ...(wardData[currentWard]['_customRooms'] || [])])].filter(Boolean).sort();
                 
-                document.getElementById('dl-desc').innerHTML = [...new Set(db.equipLibrary.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort().map(d => `<option value="${d}">`).join('');
+                // COMBINE BASE EXCEL ASSETS + CUSTOM CLOUD ASSETS
+                let baseEquip = db.equipLibrary.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    return { id: findVal(t, 'id') || findVal(t, 'assetno') || ("EQ-B-" + Math.floor(Math.random()*9999)), desc: findVal(t, 'description') || findVal(t, 'title') || "", room: findVal(t, 'room') || findVal(t, 'roomname') || "", group: findVal(t, 'group') || "1", loc: findVal(t, 'location') || "", action: "Retain / Store", notes: "" };
+                });
+                let customEquip = wardData[currentWard]['equipmentLog'] ? Object.values(wardData[currentWard]['equipmentLog']) : [];
+                let allEquip = [...baseEquip, ...customEquip];
+
+                const allEqRooms = [...new Set([...allEquip.map(e => e.room), ...(wardData[currentWard]['_customRooms'] || [])])].filter(Boolean).sort();
+                document.getElementById('dl-desc').innerHTML = [...new Set(allEquip.map(e => e.desc))].filter(Boolean).sort().map(d => `<option value="${d}">`).join('');
                 document.getElementById('dl-room').innerHTML = allEqRooms.map(r => `<option value="${r}">`).join('');
 
                 body.innerHTML += `<div class="no-print" style="background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:15px; display:flex; flex-wrap:wrap; gap:15px; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:#334155; font-size:0.85rem;">Audit Context:</span><select onchange="equipCurrentRoom=this.value; showModule('equipment')" style="padding:6px; border-radius:4px; border:1px solid #cbd5e1; min-width:150px;"><option value="All" ${equipCurrentRoom === 'All' ? 'selected' : ''}>-- All Rooms --</option>${allEqRooms.map(r => `<option value="${r}" ${equipCurrentRoom === r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="btn" onclick="promptNewRoom()" style="background:#3b82f6; padding:6px 12px; font-size:0.75rem;">+ Add Room</button></div><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:#334155; font-size:0.85rem;">Sort By:</span><select onchange="equipSortBy=this.value; showModule('equipment')" style="padding:6px; border-radius:4px; border:1px solid #cbd5e1;"><option value="room" ${equipSortBy === 'room' ? 'selected' : ''}>Room</option><option value="desc" ${equipSortBy === 'desc' ? 'selected' : ''}>Description</option></select></div></div>`;
 
-                let mappedTasks = (wardData[currentWard]['equipmentLog'] || []).map(t => {
+                let mappedTasks = allEquip.map(t => {
                     return { id: t.id, desc: (wardData[currentWard][t.id + '_desc'] !== undefined) ? wardData[currentWard][t.id + '_desc'] : t.desc, room: (wardData[currentWard][t.id + '_room'] !== undefined) ? wardData[currentWard][t.id + '_room'] : t.room, group: (wardData[currentWard][t.id + '_group'] !== undefined) ? wardData[currentWard][t.id + '_group'] : t.group, loc: (wardData[currentWard][t.id + '_loc'] !== undefined) ? wardData[currentWard][t.id + '_loc'] : t.loc, action: (wardData[currentWard][t.id + '_action'] !== undefined) ? wardData[currentWard][t.id + '_action'] : t.action, notes: (wardData[currentWard][t.id] !== undefined) ? wardData[currentWard][t.id] : t.notes };
                 });
 
@@ -608,7 +615,11 @@
                 
                 let compTasks = 0; let inProgTasks = 0; let lateTasks = 0;
                 let mappedTasks = tasks.map(t => {
-                    const id = findVal(t, 'taskid') || "T"; const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
+                    // ID PREFIX FIX FOR ENABLERS VS MOVES
+                    const baseId = findVal(t, 'taskid') || findVal(t, 'id') || "T"; 
+                    const id = (type === 'enablers' ? 'EN-' : 'MV-') + baseId;
+
+                    const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
                     const savedDue = (wardData[currentWard] && wardData[currentWard][id + '_due']) || findVal(t, 'datedue') || "";
                     if (savedStatus === 'Complete') compTasks++; else if (savedStatus === 'Late') lateTasks++; else if (savedStatus === 'In Progress') inProgTasks++;
                     let rowColor = "background-color: white;"; let borderL = "border-left: 4px solid transparent;";
@@ -654,6 +665,19 @@
             const opt = { margin: [0.4, 0.3, 0.4, 0.3], filename: `${currentWard}_${title}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: orient }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.lib-row', '.row-header', '.scope-category', '.report-header'] } };
             html2pdf().set(opt).from(element).save().then(() => { document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex'); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; }); });
         }
+
+        // RESTORED MODAL FUNCTIONS
+        function openModal() { 
+            document.getElementById('taskModal').style.display = 'flex'; 
+            ['standardDescField', 'taskFields', 'progFields', 'riskFields', 'changeFields', 'equipFields', 'dirFields'].forEach(id => document.getElementById(id).style.display = 'none');
+            if (currentType === 'risks') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('riskFields').style.display = 'block'; }
+            else if (currentType === 'programme') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('progFields').style.display = 'block'; document.getElementById('mLead').innerHTML = getDirOptions(''); }
+            else if (currentType === 'changes') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('changeFields').style.display = 'block'; document.getElementById('mChangeReq').innerHTML = getDirOptions(''); }
+            else if (currentType === 'equipment') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('equipFields').style.display = 'block'; document.getElementById('mEquipRoom').value = (equipCurrentRoom === 'All') ? '' : equipCurrentRoom; document.getElementById('mEquipLoc').value = ''; }
+            else if (currentType === 'directory') { document.getElementById('dirFields').style.display = 'block'; }
+            else { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('taskFields').style.display = 'block'; document.getElementById('mWho').innerHTML = getDirOptions(''); }
+        }
+        function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
         
         function saveNewTask() {
             if (currentType === 'directory') {
@@ -678,15 +702,15 @@
             } else if (currentType === 'equipment') {
                 const room = document.getElementById('mEquipRoom').value;
                 if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; if (room && !wardData[currentWard]['_customRooms'].includes(room)) wardData[currentWard]['_customRooms'].push(room);
-                if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = [];
-                wardData[currentWard]['equipmentLog'].push({ "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" });
+                if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
+                wardData[currentWard]['equipmentLog'][newId] = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
                 saveToCloud(); document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
             } else {
                 newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
             }
 
-            if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = [];
-            wardData['CUSTOM_ITEMS'].push({ type: currentType, ward: currentWard, task: newTask });
+            if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
+            wardData['CUSTOM_ITEMS']["CI_" + Date.now()] = { type: currentType, ward: currentWard, task: newTask };
             saveToCloud();
 
             document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
