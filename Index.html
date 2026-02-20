@@ -236,8 +236,7 @@
         let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
-        // REAL-TIME LISTENER - ARCHITECTURE UPDATE
-        // We no longer permanently mutate local arrays. We just keep WardData updated!
+        // REAL-TIME LISTENER
         function startDatabaseSync() {
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) {
@@ -259,6 +258,7 @@
             });
         }
 
+        // LEGACY SAVE FOR BULK OPERATIONS
         function saveToCloud() { if (auth.currentUser) { try { const cleanData = JSON.parse(JSON.stringify(wardData)); database.ref('pmoData').set(cleanData); } catch(err) { console.error("Firebase Sync Blocked:", err); } } }
 
         function handleFile(event) {
@@ -287,7 +287,6 @@
             const customProjects = Object.keys(wardData).filter(k => k !== 'GLOBAL_DIR' && k !== 'GLOBAL_DIR_NOTES' && k !== 'HIDDEN_PROJECTS' && k !== 'CUSTOM_ITEMS' && !excelProjects.includes(k) && !hiddenList.includes(k));
             const allProjects = [...new Set([...excelProjects, ...customProjects])].sort();
 
-            // DYNAMICALLY MERGE DATA FOR DASHBOARD
             let allChanges = [...db.changes]; let allRisks = [...db.risks];
             if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.task) { if (ci.type === 'changes') allChanges.push(ci.task); if (ci.type === 'risks') allRisks.push(ci.task); } }); }
 
@@ -417,7 +416,6 @@
             
             else if (type === 'risks') { 
                 body.innerHTML = navButtons + pdfHeader;
-                // DYNAMIC MERGE: Excel + Cloud
                 let baseTasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
                 let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'risks' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
                 let allTasks = [...baseTasks, ...customTasks];
@@ -450,7 +448,6 @@
             
             else if (type === 'programme') {
                 body.innerHTML = navButtons + pdfHeader;
-                // DYNAMIC MERGE
                 let baseTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
                 let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'programme' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
                 let allTasks = [...baseTasks, ...customTasks];
@@ -484,7 +481,6 @@
             
             else if (type === 'changes') {
                 body.innerHTML = navButtons + pdfHeader;
-                // DYNAMIC MERGE
                 let baseTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
                 let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'changes' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
                 let allTasks = [...baseTasks, ...customTasks];
@@ -549,7 +545,6 @@
             
             else if (type === 'reports') {
                 body.innerHTML = navButtons + pdfHeader;
-                // DYNAMIC MERGE FOR REPORTS
                 let allChanges = [...db.changes]; let allProg = [...db.programme]; let allRisks = [...db.risks];
                 if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.task) { if (ci.type === 'changes') allChanges.push(ci.task); if (ci.type === 'programme') allProg.push(ci.task); if (ci.type === 'risks') allRisks.push(ci.task); } }); }
 
@@ -627,7 +622,6 @@
             
             else {
                 body.innerHTML = navButtons + pdfHeader;
-                // DYNAMIC MERGE
                 let baseTasks = (type === 'enablers' ? db.enablers : db.moves).filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
                 let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === type && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
                 let tasks = [...baseTasks, ...customTasks];
@@ -657,15 +651,41 @@
             setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100); switchView('view-content');
         }
 
-        function promptNewRoom() { const r = prompt("Enter new room name/number:"); if (r) { if (!wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; if (!wardData[currentWard]['_customRooms'].includes(r)) wardData[currentWard]['_customRooms'].push(r); saveToCloud(); equipCurrentRoom = r; showModule('equipment'); } }
+        // GRANULAR WRITE FUNCTIONS - THE FIX
+        function promptNewRoom() { 
+            const r = prompt("Enter new room name/number:"); 
+            if (r) { 
+                if (!wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; 
+                if (!wardData[currentWard]['_customRooms'].includes(r)) {
+                    wardData[currentWard]['_customRooms'].push(r); 
+                    if (auth.currentUser) database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);
+                }
+                equipCurrentRoom = r; showModule('equipment'); 
+            } 
+        }
         function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
-        function saveComment(id, val) { if(!wardData[currentWard]) wardData[currentWard] = {}; wardData[currentWard][id] = val; saveToCloud(); }
-        function saveDirComment(name, val) { if (!wardData['GLOBAL_DIR_NOTES']) wardData['GLOBAL_DIR_NOTES'] = {}; wardData['GLOBAL_DIR_NOTES'][name] = val; saveToCloud(); }
+        
+        function saveComment(id, val) { 
+            if(!wardData[currentWard]) wardData[currentWard] = {}; 
+            wardData[currentWard][id] = val; 
+            if (auth.currentUser) database.ref(`pmoData/${currentWard}/${id}`).set(val); 
+        }
+        
+        function saveDirComment(name, val) { 
+            if (!wardData['GLOBAL_DIR_NOTES']) wardData['GLOBAL_DIR_NOTES'] = {}; 
+            wardData['GLOBAL_DIR_NOTES'][name] = val; 
+            if (auth.currentUser) database.ref(`pmoData/GLOBAL_DIR_NOTES/${name}`).set(val); 
+        }
+        
         function toggleRiskType(id, typeStr, isChecked) {
-            if (!wardData[currentWard]) wardData[currentWard] = {}; let current = wardData[currentWard][id + '_type'];
+            if (!wardData[currentWard]) wardData[currentWard] = {}; 
+            let current = wardData[currentWard][id + '_type'];
             if (current === undefined) { const task = db.risks.find(t => (findVal(t, 'riskid') || findVal(t, 'id')) === id); current = task ? (findVal(task, 'type') || "") : ""; }
             let arr = current ? current.split(', ') : []; if (isChecked && !arr.includes(typeStr)) arr.push(typeStr); if (!isChecked) arr = arr.filter(x => x !== typeStr);
-            let newVal = arr.join(', '); wardData[currentWard][id + '_type'] = newVal; saveToCloud(); document.getElementById('label_' + id).innerText = newVal || "Select...";
+            let newVal = arr.join(', '); 
+            wardData[currentWard][id + '_type'] = newVal; 
+            if (auth.currentUser) database.ref(`pmoData/${currentWard}/${id}_type`).set(newVal); 
+            document.getElementById('label_' + id).innerText = newVal || "Select...";
         }
 
         function downloadPDF() {
@@ -700,8 +720,10 @@
             if (currentType === 'directory') {
                 const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
                 if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
-                wardData['GLOBAL_DIR']["DIR_" + Date.now()] = { name: name, email: email, role: role }; 
-                saveToCloud();
+                const dirKey = "DIR_" + Date.now();
+                const newDir = { name: name, email: email, role: role };
+                wardData['GLOBAL_DIR'][dirKey] = newDir; 
+                if (auth.currentUser) database.ref(`pmoData/GLOBAL_DIR/${dirKey}`).set(newDir);
                 ['mDirName', 'mDirEmail', 'mDirRole'].forEach(id => document.getElementById(id).value = ''); closeModal(); showModule(currentType); return;
             }
 
@@ -724,20 +746,29 @@
             } else if (currentType === 'equipment') {
                 const room = document.getElementById('mEquipRoom').value;
                 if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; 
-                if (room && !wardData[currentWard]['_customRooms'].includes(room)) wardData[currentWard]['_customRooms'].push(room);
+                if (room && !wardData[currentWard]['_customRooms'].includes(room)) {
+                    wardData[currentWard]['_customRooms'].push(room);
+                    if (auth.currentUser) database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);
+                }
+                const eqKey = "EQ_" + Date.now();
                 if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
-                wardData[currentWard]['equipmentLog']["EQ_" + Date.now()] = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
-                saveToCloud(); document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
+                const newEq = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
+                wardData[currentWard]['equipmentLog'][eqKey] = newEq;
+                if (auth.currentUser) database.ref(`pmoData/${currentWard}/equipmentLog/${eqKey}`).set(newEq);
+                document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
             } else {
                 newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
             }
 
+            const ciKey = "CI_" + Date.now();
             if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
-            wardData['CUSTOM_ITEMS']["CI_" + Date.now()] = { type: currentType, ward: currentWard, task: newTask };
+            wardData['CUSTOM_ITEMS'][ciKey] = { type: currentType, ward: currentWard, task: newTask };
             
-            // REMOVED INSTANT DB.PUSH MUTATION - ALL DATA IS NOW MERGED DYNAMICALLY AT RENDER
+            // GRANULAR WRITE - PREVENTS CONCURRENCY CRASHES
+            if (auth.currentUser) {
+                database.ref(`pmoData/CUSTOM_ITEMS/${ciKey}`).set({ type: currentType, ward: currentWard, task: newTask });
+            }
 
-            saveToCloud();
             document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
         }
 
