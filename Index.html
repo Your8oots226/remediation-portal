@@ -237,13 +237,13 @@
         let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
-        // REAL-TIME LISTENER (WITH ARRAY-POISONING FIX)
+        // REAL-TIME LISTENER
         function startDatabaseSync() {
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) {
                     let rawData = snapshot.val();
 
-                    // 1. SANITIZER: Instantly convert poisoned arrays back into objects 
+                    // SANITIZER: Instantly convert poisoned arrays back into objects 
                     if (Array.isArray(rawData['CUSTOM_ITEMS'])) {
                         let temp = {}; rawData['CUSTOM_ITEMS'].forEach((item, idx) => { if (item) temp["CI_" + idx] = item; });
                         rawData['CUSTOM_ITEMS'] = temp;
@@ -262,10 +262,9 @@
                     wardData = rawData;
                 }
                 
-                // 2. INJECT CLOUD-SAVED CUSTOM TASKS (With crash-protection null checks)
                 if (wardData['CUSTOM_ITEMS']) {
                     Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => {
-                        if (!ci || !ci.task) return; // Crash protection
+                        if (!ci || !ci.task) return; 
                         if (ci.type === 'risks' && !db.risks.find(t => (t.riskid||t.id) === ci.task.riskid)) db.risks.push(ci.task);
                         if (ci.type === 'programme' && !db.programme.find(t => (t.activityid||t.id) === ci.task.activityid)) db.programme.push(ci.task);
                         if (ci.type === 'changes' && !db.changes.find(t => (t.no||t.id) === ci.task.no)) db.changes.push(ci.task);
@@ -274,7 +273,6 @@
                     });
                 }
 
-                // SMART SAFETY LOCK
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'file'));
                 
@@ -286,7 +284,21 @@
             });
         }
 
-        function saveToCloud() { if (auth.currentUser) database.ref('pmoData').set(wardData); }
+        // ==========================================
+        // THE CURE: CRASH-PROOF FIREBASE SAVE ENGINE
+        // ==========================================
+        function saveToCloud() { 
+            if (auth.currentUser) {
+                try {
+                    // Firebase completely crashes if it encounters 'undefined' values anywhere in the object.
+                    // This creates a perfect, pristine copy of the data with all 'undefined' ghosts stripped out automatically.
+                    const cleanData = JSON.parse(JSON.stringify(wardData));
+                    database.ref('pmoData').set(cleanData); 
+                } catch(err) {
+                    console.error("Firebase Sync Blocked:", err);
+                }
+            } 
+        }
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -522,7 +534,6 @@
                 body.innerHTML = navButtons + pdfHeader;
                 if (!wardData[currentWard]) wardData[currentWard] = {};
                 
-                // COMBINE BASE EXCEL ASSETS + CUSTOM CLOUD ASSETS
                 let baseEquip = db.equipLibrary.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
                     return { id: findVal(t, 'id') || findVal(t, 'assetno') || ("EQ-B-" + Math.floor(Math.random()*9999)), desc: findVal(t, 'description') || findVal(t, 'title') || "", room: findVal(t, 'room') || findVal(t, 'roomname') || "", group: findVal(t, 'group') || "1", loc: findVal(t, 'location') || "", action: "Retain / Store", notes: "" };
                 });
@@ -686,7 +697,7 @@
             html2pdf().set(opt).from(element).save().then(() => { document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex'); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; }); });
         }
 
-        // --- NEW TASK ENGINE (CRASH-PROOFED WITH INSTANT UI UPDATES) ---
+        // --- NEW TASK ENGINE ---
         function openModal() { 
             document.getElementById('taskModal').style.display = 'flex'; 
             ['standardDescField', 'taskFields', 'progFields', 'riskFields', 'changeFields', 'equipFields', 'dirFields'].forEach(id => document.getElementById(id).style.display = 'none');
@@ -700,6 +711,7 @@
         function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
         
         function saveNewTask() {
+            // DIRECTORY
             if (currentType === 'directory') {
                 const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
                 if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
@@ -707,15 +719,20 @@
                 saveToCloud();
                 ['mDirName', 'mDirEmail', 'mDirRole'].forEach(id => document.getElementById(id).value = ''); closeModal(); showModule(currentType); return;
             }
+
             const desc = document.getElementById('mDesc').value; if (!desc) return alert("Enter description");
+            
+            // Blanket failsafe to prevent crashes across all modules
+            if (!wardData[currentWard]) wardData[currentWard] = {}; 
+
             let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : currentType === 'risks' ? "RSK-" : "NEW-"; 
             const newId = prefix + Math.floor(Math.random() * 9999);
-            
             let newTask = {};
+            
             if (currentType === 'risks') {
                 const selectedTypes = Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb => cb.value).join(', ');
                 newTask = { "riskid": newId, "riskdescription": desc, "ward": currentWard, "type": selectedTypes, "impact": document.getElementById('mImp').value, "prob": document.getElementById('mProb').value, "mitigatingaction/s": "" };
-                if (!wardData[currentWard]) wardData[currentWard] = {}; wardData[currentWard][newId + '_type'] = selectedTypes;
+                wardData[currentWard][newId + '_type'] = selectedTypes;
                 document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
             } else if (currentType === 'programme') {
                 newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": document.getElementById('mLead').value, "startdate": document.getElementById('mStart').value, "duration": document.getElementById('mDur').value, "status": "Not Started" };
@@ -723,7 +740,8 @@
                 newTask = { "no": newId, "description": desc, "ward": currentWard, "requestor": document.getElementById('mChangeReq').value, "date": document.getElementById('mChangeDate').value, "cost": document.getElementById('mChangeCost').value, "time": document.getElementById('mChangeTime').value, "fundingsource": document.getElementById('mChangeFund').value, "status": document.getElementById('mChangeStatus').value };
             } else if (currentType === 'equipment') {
                 const room = document.getElementById('mEquipRoom').value;
-                if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; if (room && !wardData[currentWard]['_customRooms'].includes(room)) wardData[currentWard]['_customRooms'].push(room);
+                if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; 
+                if (room && !wardData[currentWard]['_customRooms'].includes(room)) wardData[currentWard]['_customRooms'].push(room);
                 if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
                 wardData[currentWard]['equipmentLog']["EQ_" + Date.now()] = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
                 saveToCloud(); document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
@@ -734,7 +752,7 @@
             if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
             wardData['CUSTOM_ITEMS']["CI_" + Date.now()] = { type: currentType, ward: currentWard, task: newTask };
             
-            // INSTANT UI UPDATE: Push to local array so the item appears before cloud sync finishes
+            // INSTANT UI UPDATE
             if (currentType === 'risks') db.risks.push(newTask);
             else if (currentType === 'programme') db.programme.push(newTask);
             else if (currentType === 'changes') db.changes.push(newTask);
