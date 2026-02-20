@@ -140,7 +140,9 @@
                 <div id="moduleBody"></div>
             </div>
         </div>
-    </div> <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
+    </div>
+
+    <div id="taskModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
         <div style="background:white; padding:25px; border-radius:12px; width:450px; box-shadow:0 4px 20px rgba(0,0,0,0.2); max-height:90vh; overflow-y:auto;">
             <h2 id="modalTitle" style="margin-top:0;">Add New Item</h2>
             <div id="standardDescField"><label style="display:block; margin-top:10px; font-weight:bold;">Description / Title</label><input type="text" id="mDesc" list="dl-desc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></div>
@@ -212,12 +214,10 @@
         // --- AUTHENTICATION LOGIC ---
         auth.onAuthStateChanged(user => {
             if (user) {
-                // Logged in! Hide login, show app, start syncing
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('app-container').style.display = 'block';
                 startDatabaseSync();
             } else {
-                // Logged out! Show login, hide app
                 document.getElementById('login-overlay').style.display = 'flex';
                 document.getElementById('app-container').style.display = 'none';
                 document.getElementById('loginPass').value = '';
@@ -230,14 +230,11 @@
             const errDiv = document.getElementById('loginError');
             errDiv.innerText = "Authenticating...";
             
-            auth.signInWithEmailAndPassword(email, pass)
-                .catch(error => { errDiv.innerText = "Incorrect Email or Password."; });
+            auth.signInWithEmailAndPassword(email, pass).catch(error => { errDiv.innerText = "Incorrect Email or Password."; });
         }
 
         let db = { library: [], depts: [], enablers: [], moves: [], programme: [], risks: [], directory: [], changes: [], equipLibrary: [] };
-        let currentWard = "";
-        let currentType = "";
-        let wardData = {};
+        let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
         // REAL-TIME LISTENER (Only triggers when logged in)
@@ -245,7 +242,7 @@
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) wardData = snapshot.val();
                 
-                // 1. INJECT CLOUD-SAVED CUSTOM TASKS INTO LOCAL LISTS
+                // INJECT CLOUD-SAVED CUSTOM TASKS INTO LOCAL LISTS
                 if (wardData['CUSTOM_ITEMS']) {
                     wardData['CUSTOM_ITEMS'].forEach(ci => {
                         if (ci.type === 'risks' && !db.risks.find(t => (t.riskid||t.id) === ci.task.riskid)) db.risks.push(ci.task);
@@ -256,7 +253,7 @@
                     });
                 }
 
-                // 2. SMART SAFETY LOCK: Pauses screen only if typing
+                // SMART SAFETY LOCK: Pauses screen only if typing
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'file'));
                 
@@ -268,9 +265,7 @@
             });
         }
 
-        function saveToCloud() {
-            if (auth.currentUser) database.ref('pmoData').set(wardData);
-        }
+        function saveToCloud() { if (auth.currentUser) database.ref('pmoData').set(wardData); }
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -278,12 +273,8 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const wb = XLSX.read(data, {type: 'array'});
-                    const getSheet = (name) => {
-                        const actual = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase()));
-                        return actual ? XLSX.utils.sheet_to_json(wb.Sheets[actual]) : [];
-                    };
+                    const data = new Uint8Array(e.target.result); const wb = XLSX.read(data, {type: 'array'});
+                    const getSheet = (name) => { const actual = wb.SheetNames.find(n => n.toLowerCase().includes(name.toLowerCase())); return actual ? XLSX.utils.sheet_to_json(wb.Sheets[actual]) : []; };
                     db.library = getSheet('library'); db.depts = getSheet('baseline'); db.enablers = getSheet('enablers');
                     db.moves = getSheet('moves'); db.programme = getSheet('programme') || getSheet('program'); db.risks = getSheet('risk'); 
                     db.directory = getSheet('directory') || getSheet('contacts') || []; db.changes = getSheet('change'); db.equipLibrary = getSheet('equipment') || getSheet('audit') || getSheet('asset') || [];
@@ -328,19 +319,14 @@
             list.innerHTML = html;
         }
 
-        function deleteCurrentProject() {
-            if(confirm(`Are you sure you want to completely delete "${currentWard}"? This will hide it from the dashboard and clear your local data.`)) {
-                if (!wardData['HIDDEN_PROJECTS']) wardData['HIDDEN_PROJECTS'] = []; wardData['HIDDEN_PROJECTS'].push(currentWard); delete wardData[currentWard]; saveToCloud(); switchView('view-home');
-            }
-        }
+        function deleteCurrentProject() { if(confirm(`Are you sure you want to completely delete "${currentWard}"?`)) { if (!wardData['HIDDEN_PROJECTS']) wardData['HIDDEN_PROJECTS'] = []; wardData['HIDDEN_PROJECTS'].push(currentWard); delete wardData[currentWard]; saveToCloud(); switchView('view-home'); } }
 
         function saveNewProject() {
             const name = document.getElementById('npName').value.trim(); if (!name) return alert("Please enter a Project Name."); if (!wardData[name]) wardData[name] = {};
             wardData[name]['baseline_budget'] = document.getElementById('npBudget').value; wardData[name]['baseline_prog'] = document.getElementById('npProg').value;
             wardData[name]['ms_briefing'] = document.getElementById('npMsBriefing').value; wardData[name]['ms_design'] = document.getElementById('npMsDesign').value;
             wardData[name]['ms_costing'] = document.getElementById('npMsCosting').value; wardData[name]['ms_delivery'] = document.getElementById('npMsDelivery').value;
-            saveToCloud(); document.getElementById('npName').value = '';
-            ['npBudget', 'npProg', 'npMsBriefing', 'npMsDesign', 'npMsCosting', 'npMsDelivery'].forEach(id => document.getElementById(id).value = '');
+            saveToCloud(); document.getElementById('npName').value = ''; ['npBudget', 'npProg', 'npMsBriefing', 'npMsDesign', 'npMsCosting', 'npMsDelivery'].forEach(id => document.getElementById(id).value = '');
             selectWard(name);
         }
 
@@ -372,22 +358,302 @@
             if (isNaN(days) || days <= 0) return null; if (d.getDay() === 0) d.setDate(d.getDate() + 1); if (d.getDay() === 6) d.setDate(d.getDate() + 2); 
             days -= 1; while (days > 0) { d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) days--; } return d;
         }
-        function formatDateGB(dateObj) {
-            if (!dateObj) return ""; let dd = String(dateObj.getDate()).padStart(2, '0'); let mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-            let yyyy = dateObj.getFullYear(); return `${dd}/${mm}/${yyyy}`;
+        function formatDateGB(dateObj) { if (!dateObj) return ""; let dd = String(dateObj.getDate()).padStart(2, '0'); let mm = String(dateObj.getMonth() + 1).padStart(2, '0'); let yyyy = dateObj.getFullYear(); return `${dd}/${mm}/${yyyy}`; }
+
+        function showModule(type) {
+            currentType = type; const body = document.getElementById('moduleBody'); body.innerHTML = "";
+            const reportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            let headerTitle = currentWard; let subTitle = "";
+            
+            if (type === 'brief') subTitle = "Scope Builder Report"; else if (type === 'enablers') { headerTitle += " Enablers"; subTitle = "Estates Tasks"; }
+            else if (type === 'moves') { headerTitle += " Ward Move"; subTitle = "Move Plan"; } else if (type === 'programme') { headerTitle += " Programme"; subTitle = "Activities & Milestones"; }
+            else if (type === 'risks') { headerTitle += " Risk Register"; subTitle = "Risks & Issues"; } else if (type === 'changes') { headerTitle += " Change Control"; subTitle = "Scope & Cost Variations"; }
+            else if (type === 'equipment') { headerTitle += " Equipment Audit"; subTitle = "Assets, Storage & Shortfalls"; } else if (type === 'directory') { headerTitle = "Project Directory"; subTitle = "Stakeholders"; }
+            else if (type === 'reports') { headerTitle += " Monthly Report"; subTitle = "Executive Overview"; }
+
+            let filterControls = "";
+            if (type === 'brief') filterControls = `<button class="btn" style="background:#8b5cf6;" onclick="scopeFilterActive = !scopeFilterActive; showModule('brief')">${scopeFilterActive ? '👁️ Show All Items' : '👁️ Hide Unused Items'}</button>`;
+            else if (type === 'risks') filterControls = `<select class="btn" style="background:#8b5cf6; color:white; border:none; cursor:pointer; font-weight:bold; appearance:none;" onchange="riskFilterLevel = parseInt(this.value); showModule('risks')"><option value="0" ${riskFilterLevel === 0 ? 'selected' : ''}>👁️ Show All Risks</option><option value="8" ${riskFilterLevel === 8 ? 'selected' : ''}>🚨 Med & High Only (8+)</option><option value="12" ${riskFilterLevel === 12 ? 'selected' : ''}>🔥 Score 12+ Only</option><option value="15" ${riskFilterLevel === 15 ? 'selected' : ''}>💥 High Only (15+)</option></select>`;
+
+            const showAddBtn = (type !== 'brief' && type !== 'reports');
+            const navButtons = `<div class="no-print" style="margin-bottom:20px; display:flex; gap:10px; border-bottom:1px solid #ddd; padding-bottom:15px; align-items:center; flex-wrap:wrap;"><button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back to Menu</button><button class="btn" style="background:#ef4444;" onclick="downloadPDF()">Download PDF</button>${showAddBtn ? `<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add New Item</button>` : ''}${filterControls}</div>`;
+            const pdfHeader = `<div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end; padding-right:10px; page-break-inside:avoid;"><div><h2 style="margin:0; font-size:1.4rem; color:#1e293b; font-weight:bold;">${headerTitle}</h2><span style="font-size:0.8rem; color:#64748b;">${subTitle}</span></div><div style="font-size:0.8rem; color:#333; white-space:nowrap;"><strong>Date:</strong> ${reportDate}</div></div>`;
+            document.getElementById('moduleTitle').innerText = subTitle;
+
+            if (type === 'brief') {
+                body.innerHTML = navButtons + pdfHeader;
+                let totalItems = 0; let filledItems = 0;
+                const getCat = (item) => findVal(item, 'category') || findVal(item, 'group') || findVal(item, 'element') || findVal(item, 'package');
+                const cats = [...new Set(db.library.map(i => getCat(i)))].filter(c => c);
+                cats.forEach(cat => { db.library.filter(i => getCat(i) === cat).forEach(i => { const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item"; const saved = (wardData[currentWard] && wardData[currentWard][desc]) || ""; totalItems++; if (saved.trim() !== "") filledItems++; }); });
+                let pct = totalItems === 0 ? 0 : Math.round((filledItems/totalItems)*100);
+                body.innerHTML += `<div class="no-print" style="margin-bottom:25px; background:white; padding:20px; border-radius:8px; border:1px solid #cbd5e1; box-shadow:0 2px 4px rgba(0,0,0,0.02); page-break-inside:avoid;"><div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span style="font-size:0.85rem; font-weight:bold; color:#334155; text-transform:uppercase;">Briefing Progress</span><span style="font-size:0.85rem; font-weight:bold; color:#3b82f6;">${pct}% Defined (${filledItems}/${totalItems} items)</span></div><div style="width:100%; background:#f1f5f9; height:12px; border-radius:6px; overflow:hidden; border:1px solid #e2e8f0;"><div style="width:${pct}%; background:#3b82f6; height:100%; border-radius:6px; transition:width 0.3s;"></div></div></div>`;
+
+                let itemsRendered = 0;
+                cats.forEach(cat => {
+                    let validItems = db.library.filter(i => getCat(i) === cat);
+                    if (scopeFilterActive) validItems = validItems.filter(i => { const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item"; return ((wardData[currentWard] && wardData[currentWard][desc]) || "").trim() !== ""; });
+                    if (validItems.length === 0) return; itemsRendered += validItems.length;
+                    let rows = validItems.map(i => {
+                        const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
+                        const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
+                        let isFilled = saved.trim() !== "" ? "border-left: 3px solid #10b981;" : "border-left: 3px solid transparent;";
+                        return `<div class="lib-row" style="page-break-inside:avoid; display:flex; gap:15px; padding:10px 15px; border-bottom:1px solid #f1f5f9; align-items:start; ${isFilled} background:white; transition:background 0.2s;"><div style="font-size:0.85rem; line-height:1.4; font-weight:600; color:#334155; width:40%; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:36px; height:36px; overflow-y:hidden; font-size:0.8rem; padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; width:60%; resize:none; box-sizing:border-box; background:#f8fafc;" placeholder="Enter scope notes..." oninput="autoResize(this); saveComment('${desc}', this.value); if(this.value.trim() !== '') { this.parentElement.style.borderLeft = '3px solid #10b981'; } else { this.parentElement.style.borderLeft = '3px solid transparent'; }">${saved}</textarea></div>`;
+                    }).join('');
+                    body.innerHTML += `<div class="scope-category" style="margin-bottom:20px; page-break-inside:avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02);"><div class="row-header" style="background:#f8fafc; color:#1e293b; padding:12px 15px; font-size:0.9rem; font-weight:bold; border-bottom:1px solid #e2e8f0;">📂 ${cat}</div>${rows}</div>`;
+                });
+                if (itemsRendered === 0 && scopeFilterActive) body.innerHTML += `<div style="padding:40px; text-align:center; color:#64748b; font-style:italic; border:1px dashed #cbd5e1; border-radius:8px;">No scope items have been defined yet. Toggle "Show All Items" to view the master list.</div>`;
+            }
+            
+            else if (type === 'directory') {
+                body.innerHTML = navButtons + pdfHeader;
+                let contacts = [...db.directory]; if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(c => contacts.push(c));
+                let rows = contacts.map((c, index) => {
+                    const name = findVal(c, 'name') || findVal(c, 'contact') || c.name || "Unknown"; const email = findVal(c, 'email') || c.email || ""; const role = findVal(c, 'role') || findVal(c, 'company') || c.role || "";
+                    const savedNotes = (wardData['GLOBAL_DIR_NOTES'] && wardData['GLOBAL_DIR_NOTES'][name]) || "";
+                    return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; align-items:center; padding:6px 0; border-bottom:1px solid #e2e8f0;"><div style="font-size:0.85rem; font-weight:bold;">${name}</div><div style="font-size:0.8rem;"><a href="mailto:${email}" style="color:#3b82f6; text-decoration:none;">${email}</a></div><div style="font-size:0.8rem; color:#64748b;">${role}</div><textarea class="comment-input" style="min-height:28px; height:28px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:4px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" placeholder="Notes..." oninput="autoResize(this); saveDirComment('${name}', this.value)">${savedNotes}</textarea></div>`;
+                }).join('');
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 1fr 1fr 1fr 2fr; gap:10px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>Name</div><div>Email</div><div>Role / Company</div><div>Notes</div></div>${rows}`;
+            }
+            
+            else if (type === 'risks') { 
+                body.innerHTML = navButtons + pdfHeader;
+                let mappedTasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    const id = findVal(t, 'riskid') || findVal(t, 'id') || "R"; const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
+                    const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
+                    const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
+                    const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
+                    const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
+                    return { id, desc, savedType, savedImp, savedProb, score: (savedImp * savedProb), savedMit };
+                });
+                if (riskFilterLevel > 0) mappedTasks = mappedTasks.filter(t => t.score >= riskFilterLevel);
+                mappedTasks.sort((a, b) => b.score - a.score);
+
+                if (mappedTasks.length === 0) { body.innerHTML += `<div style="padding:40px; text-align:center; color:#64748b; font-style:italic; border:1px dashed #cbd5e1; border-radius:8px;">No risks match your filter.</div>`; } 
+                else {
+                    let rows = mappedTasks.map(t => {
+                        let colorClass = ""; let scoreColor = "#64748b"; let borderL = "border-left: 4px solid #cbd5e1;";
+                        if (t.score >= 15) { colorClass = "background-color:#fff1f2;"; scoreColor = "#ef4444"; borderL = "border-left: 4px solid #ef4444;"; } 
+                        else if (t.score >= 8) { colorClass = "background-color:#fffbeb;"; scoreColor = "#d97706"; borderL = "border-left: 4px solid #f59e0b;"; }
+                        else if (t.score > 0) { borderL = "border-left: 4px solid #10b981;"; }
+                        const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
+                        const ddHtml = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'].map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${t.savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${t.id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
+                        return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; align-items:start; ${colorClass} ${borderL} padding:6px 10px; border-bottom:1px solid #e2e8f0; min-height:40px; margin-bottom:4px; border-radius:0 4px 4px 0;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div style="font-size:0.85rem; font-weight:bold; color:#1e293b; padding-top:6px;">${t.desc}</div><div style="position:relative; margin-top:4px;"><div id="label_${t.id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; padding:6px; border-radius:4px; cursor:pointer; min-height:26px;">${t.savedType || "Select Type..."}</div><div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:50; padding:6px; border-radius:4px;" onmouseleave="this.style.display='none'">${ddHtml}</div></div><div><select onchange="saveComment('${t.id}_imp', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedImp)}</select></div><div><select onchange="saveComment('${t.id}_prob', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedProb)}</select></div><div style="font-size:1.1rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${t.score}</div><textarea class="comment-input" style="min-height:34px; height:34px; overflow-y:hidden; resize:none; font-size:0.8rem; padding:8px; border:1px solid #cbd5e1; border-radius:4px; width:100%; box-sizing:border-box;" placeholder="Add mitigations..." oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.savedMit}</textarea></div>`;
+                    }).join('');
+                    body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; padding:10px; font-size:0.8rem; background:#1e293b; color:white; border-radius:6px; margin-bottom:10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${rows}`;
+                }
+            }
+            
+            else if (type === 'programme') {
+                body.innerHTML = navButtons + pdfHeader;
+                let validTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    const id = findVal(t, 'activityid') || findVal(t, 'id') || "A"; const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
+                    const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
+                    const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
+                    return { id, desc, startObj: savedStart ? new Date(savedStart) : null, endObj: calcEndObj(savedStart, savedDur), savedStatus: (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started", savedLead: (wardData[currentWard] && wardData[currentWard][id + '_lead']) || findVal(t, 'lead') || "", savedStart, savedDur, savedNotes: (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'notes') || "" };
+                }).filter(t => t.startObj && t.endObj);
+
+                if (validTasks.length > 0) {
+                    const minDate = new Date(Math.min(...validTasks.map(t => t.startObj))); const maxDate = new Date(Math.max(...validTasks.map(t => t.endObj)));
+                    let totalSpan = ((maxDate - minDate) / (1000 * 60 * 60 * 24)) || 1;
+                    let barsHtml = validTasks.map(t => {
+                        let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
+                        let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100; if (width < 2) width = 2; if (left + width > 100) width = 100 - left;
+                        let barColor = t.savedStatus === 'Complete' ? "#10b981" : t.savedStatus === 'In Progress' ? "#3b82f6" : t.savedStatus === 'Late' ? "#ef4444" : "#94a3b8";
+                        return `<div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;"><div style="width:25%; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold; color:#334155;" title="${t.desc}">${t.desc}</div><div style="width:75%; position:relative; background:#f1f5f9; height:20px; border-radius:3px; border:1px solid #e2e8f0; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div style="position:absolute; left:${left}%; width:${width}%; background:${barColor}; height:100%; border-radius:2px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div></div></div>`;
+                    }).join('');
+                    body.innerHTML += `<div style="margin-bottom:25px; background:white; padding:20px; border-radius:8px; border:1px solid #cbd5e1; page-break-inside:avoid;"><h3 style="margin-top:0; color:#1e293b; font-size:1rem; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:15px;">Live Programme Timeline</h3><div style="display:flex; margin-bottom:10px; font-size:0.75rem; color:#64748b; font-weight:bold;"><div style="width:25%;">Activity</div><div style="width:75%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;"><span>${formatDateGB(minDate)}</span><span>${formatDateGB(maxDate)}</span></div></div>${barsHtml}<div class="no-print" style="margin-top:15px; display:flex; gap:15px; font-size:0.75rem; color:#64748b; justify-content:flex-end;"><span style="display:flex; align-items:center; gap:5px;"><div style="width:12px; height:12px; background:#94a3b8; border-radius:2px;"></div>Not Started</span><span style="display:flex; align-items:center; gap:5px;"><div style="width:12px; height:12px; background:#3b82f6; border-radius:2px;"></div>In Progress</span><span style="display:flex; align-items:center; gap:5px;"><div style="width:12px; height:12px; background:#10b981; border-radius:2px;"></div>Complete</span><span style="display:flex; align-items:center; gap:5px;"><div style="width:12px; height:12px; background:#ef4444; border-radius:2px;"></div>Late</span></div></div>`;
+                }
+
+                let rows = validTasks.map(t => {
+                    let rowColor = ""; if (t.endObj && t.savedStatus !== 'Complete') { const diffDays = Math.ceil((t.endObj - new Date()) / (1000 * 60 * 60 * 24)); if (diffDays < 0) rowColor = "background-color: #fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; else if (diffDays <= 7) rowColor = "background-color: #fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;"; }
+                    const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late'].map(opt => `<option value="${opt}" ${t.savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${t.desc}</div><div><select onchange="saveComment('${t.id}_lead', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(t.savedLead)}</select></div><div><input type="date" value="${t.savedStart}" onchange="saveComment('${t.id}_start', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div><div><input type="number" value="${t.savedDur}" onchange="saveComment('${t.id}_dur', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;" placeholder="Days"></div><div style="font-size:0.75rem; padding-top:8px; font-weight:bold; color:#475569;">${formatDateGB(t.endObj) || "-"}</div><div><select onchange="saveComment('${t.id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div><textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.savedNotes}</textarea></div>`;
+                }).join('');
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End Date</div><div>Status</div><div>Notes</div></div>${rows}`;
+            }
+            
+            else if (type === 'changes') {
+                body.innerHTML = navButtons + pdfHeader;
+                let totalCost = 0; let totalTime = 0;
+                let rows = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    const id = findVal(t, 'no') || findVal(t, 'id') || "CHG"; const desc = findVal(t, 'description') || "";
+                    const savedReq = (wardData[currentWard] && wardData[currentWard][id + '_req']) || findVal(t, 'requestor') || "";
+                    const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || "";
+                    const savedCost = (wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "";
+                    const savedTime = (wardData[currentWard] && wardData[currentWard][id + '_time']) || findVal(t, 'timeimpact') || findVal(t, 'time') || "";
+                    const savedFund = (wardData[currentWard] && wardData[currentWard][id + '_fund']) || findVal(t, 'fundingsource') || "";
+                    const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
+                    const savedNotes = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'comments') || "";
+
+                    if (savedStatus === 'Instructed' || savedStatus === 'Pending') { totalCost += parseFloat(savedCost) || 0; totalTime += parseFloat(savedTime) || 0; }
+                    const statusOptions = ['Pending', 'Instructed', 'Refused', 'Cancelled'].map(opt => `<option value="${opt}" ${savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    let rowColor = savedStatus === 'Instructed' ? "background-color: #dcfce7;" : (savedStatus === 'Refused' || savedStatus === 'Cancelled') ? "background-color: #f1f5f9; color: #94a3b8;" : "";
+
+                    return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${id}</div><div style="font-size:0.8rem; font-weight:600; line-height:1.2; padding-top:8px;">${desc}</div><div><select onchange="saveComment('${id}_req', this.value); showModule('${type}')" style="border:1px solid #ddd; width:100%; font-size:0.75rem; padding:4px; margin-top:4px; background:white;">${getDirOptions(savedReq)}</select></div><div><input type="date" value="${savedDate}" onchange="saveComment('${id}_date', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div><div><input type="number" value="${savedCost}" onchange="saveComment('${id}_cost', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div><div><input type="text" value="${savedFund}" onchange="saveComment('${id}_fund', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div><div><input type="number" value="${savedTime}" onchange="saveComment('${id}_time', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:2px; border-radius:3px;"></div><div><select onchange="saveComment('${id}_status', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${statusOptions}</select></div><textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${id}', this.value)">${savedNotes}</textarea></div>`;
+                }).join('');
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>No.</div><div>Description</div><div>Requestor</div><div>Date</div><div>Cost £</div><div>Funding</div><div>Time (Days)</div><div>Status</div><div>Comments</div></div>${rows}`;
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2fr 1fr 0.8fr 0.8fr 1fr 0.8fr 1fr 1.5fr; gap:5px; padding:8px 6px; font-size:0.85rem; background:#1e293b; color:white; font-weight:bold; margin-top:10px;"><div></div><div>TOTALS (Pending & Instructed)</div><div></div><div></div><div style="color:#fecaca;">£${totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div></div><div style="color:#fecaca;">${totalTime} Days</div><div></div><div></div></div>`;
+            }
+            
+            else if (type === 'equipment') {
+                body.innerHTML = navButtons + pdfHeader;
+                if (!wardData[currentWard]) wardData[currentWard] = {};
+                const excelRooms = [...new Set(db.equipLibrary.map(item => findVal(item, 'room') || findVal(item, 'roomname') || findVal(item, 'roomnumber')))].filter(Boolean);
+                const allEqRooms = [...new Set([...excelRooms, ...(wardData[currentWard]['_customRooms'] || [])])].filter(Boolean).sort();
+                
+                document.getElementById('dl-desc').innerHTML = [...new Set(db.equipLibrary.map(item => findVal(item, 'description') || findVal(item, 'title')))].filter(Boolean).sort().map(d => `<option value="${d}">`).join('');
+                document.getElementById('dl-room').innerHTML = allEqRooms.map(r => `<option value="${r}">`).join('');
+
+                body.innerHTML += `<div class="no-print" style="background:#f8fafc; padding:12px; border-radius:6px; border:1px solid #cbd5e1; margin-bottom:15px; display:flex; flex-wrap:wrap; gap:15px; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:#334155; font-size:0.85rem;">Audit Context:</span><select onchange="equipCurrentRoom=this.value; showModule('equipment')" style="padding:6px; border-radius:4px; border:1px solid #cbd5e1; min-width:150px;"><option value="All" ${equipCurrentRoom === 'All' ? 'selected' : ''}>-- All Rooms --</option>${allEqRooms.map(r => `<option value="${r}" ${equipCurrentRoom === r ? 'selected' : ''}>${r}</option>`).join('')}</select><button class="btn" onclick="promptNewRoom()" style="background:#3b82f6; padding:6px 12px; font-size:0.75rem;">+ Add Room</button></div><div style="display:flex; align-items:center; gap:10px;"><span style="font-weight:bold; color:#334155; font-size:0.85rem;">Sort By:</span><select onchange="equipSortBy=this.value; showModule('equipment')" style="padding:6px; border-radius:4px; border:1px solid #cbd5e1;"><option value="room" ${equipSortBy === 'room' ? 'selected' : ''}>Room</option><option value="desc" ${equipSortBy === 'desc' ? 'selected' : ''}>Description</option></select></div></div>`;
+
+                let mappedTasks = (wardData[currentWard]['equipmentLog'] || []).map(t => {
+                    return { id: t.id, desc: (wardData[currentWard][t.id + '_desc'] !== undefined) ? wardData[currentWard][t.id + '_desc'] : t.desc, room: (wardData[currentWard][t.id + '_room'] !== undefined) ? wardData[currentWard][t.id + '_room'] : t.room, group: (wardData[currentWard][t.id + '_group'] !== undefined) ? wardData[currentWard][t.id + '_group'] : t.group, loc: (wardData[currentWard][t.id + '_loc'] !== undefined) ? wardData[currentWard][t.id + '_loc'] : t.loc, action: (wardData[currentWard][t.id + '_action'] !== undefined) ? wardData[currentWard][t.id + '_action'] : t.action, notes: (wardData[currentWard][t.id] !== undefined) ? wardData[currentWard][t.id] : t.notes };
+                });
+
+                if (equipCurrentRoom !== 'All') mappedTasks = mappedTasks.filter(t => t.room === equipCurrentRoom);
+                equipSortBy === 'room' ? mappedTasks.sort((a, b) => a.room.localeCompare(b.room) || a.desc.localeCompare(b.desc)) : mappedTasks.sort((a, b) => a.desc.localeCompare(b.desc));
+
+                let lastRoomRendered = null; let rowsHtml = "";
+                mappedTasks.forEach(t => {
+                    if (equipCurrentRoom === 'All' && equipSortBy === 'room' && t.room !== lastRoomRendered) { rowsHtml += `<div class="row-header" style="background:#f1f5f9; color:#334155; padding:6px; font-size:0.85rem; border-left:4px solid #3b82f6; font-weight:bold; margin-top:10px; margin-bottom:5px; page-break-inside:avoid;">Room: ${t.room || "Unassigned"}</div>`; lastRoomRendered = t.room; }
+                    const groupOptions = ['1', '2', '3'].map(opt => `<option value="${opt}" ${t.group === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    const actionOptions = ['Retain / Store', 'Dispose', 'Order Shortfall'].map(opt => `<option value="${opt}" ${t.action === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    let rowColor = t.action === 'Order Shortfall' ? "background-color: #fee2e2;" : t.action === 'Dispose' ? "background-color: #fef9c3;" : "";
+
+                    rowsHtml += `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.6fr 2fr 1.5fr 0.6fr 1.5fr 1fr 1.5fr; gap:5px; align-items:start; ${rowColor} padding:4px 0; border-bottom:1px solid #e2e8f0; min-height:40px;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div><input type="text" value="${t.desc}" list="dl-desc" onchange="saveComment('${t.id}_desc', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div><div><input type="text" value="${t.room}" list="dl-room" onchange="saveComment('${t.id}_room', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div><div><select onchange="saveComment('${t.id}_group', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${groupOptions}</select></div><div><input type="text" value="${t.loc}" onchange="saveComment('${t.id}_loc', this.value); showModule('${type}')" style="border:1px solid #ddd; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:3px;"></div><div><select onchange="saveComment('${t.id}_action', this.value); showModule('${type}')" style="border:none; background:transparent; font-size:0.75rem; width:100%; margin-top:4px;">${actionOptions}</select></div><textarea class="comment-input" style="min-height:32px; height:32px; overflow-y:hidden; resize:none; font-size:0.75rem; padding:6px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;" oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.notes}</textarea></div>`;
+                });
+
+                if (mappedTasks.length === 0) rowsHtml = `<div style="padding:20px; text-align:center; color:#64748b; font-style:italic; border-bottom:1px solid #ddd;">No equipment listed for this view. Start your audit by clicking "+ Add New Item".</div>`;
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.6fr 2fr 1.5fr 0.6fr 1.5fr 1fr 1.5fr; gap:5px; padding:6px; font-size:0.8rem; background:#334155; color:white;"><div>ID</div><div>Description</div><div>Room</div><div>Group</div><div>Storage Location</div><div>Action</div><div>Notes</div></div>${rowsHtml}`;
+            }
+            
+            else if (type === 'reports') {
+                body.innerHTML = navButtons + pdfHeader;
+                const changeTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                let totalReportCost = 0; let totalReportTime = 0;
+                changeTasks.forEach(t => {
+                    const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
+                    const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
+                    if (savedStatus === 'Instructed' || savedStatus === 'Pending') {
+                        totalReportCost += parseFloat((wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "") || 0;
+                        totalReportTime += parseFloat((wardData[currentWard] && wardData[currentWard][id + '_time']) || findVal(t, 'timeimpact') || findVal(t, 'time') || "") || 0;
+                    }
+                });
+
+                const bBudget = parseFloat(wardData[currentWard] && wardData[currentWard]['baseline_budget']) || 0;
+                let html = `<div style="display:flex; gap:20px; margin-bottom:25px; page-break-inside:avoid;"><div style="flex:1; background:#f8fafc; padding:15px; border-radius:6px; border:1px solid #cbd5e1;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:10px;">Project Baseline & Variance</div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;"><span>Baseline Budget:</span> <strong>£${bBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem; border-bottom:1px solid #e2e8f0; padding-bottom:5px;"><span>Current Approved Budget:</span> <strong style="color:${totalReportCost > 0 ? '#ef4444' : '#10b981'};">£${(bBudget + totalReportCost).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></div><div style="display:flex; justify-content:space-between; margin-bottom:5px; margin-top:5px; font-size:0.85rem;"><span>Baseline Programme:</span> <strong>${(wardData[currentWard] && wardData[currentWard]['baseline_prog']) || "Not Set"}</strong></div><div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>Programme Variance:</span> <strong style="color:${totalReportTime > 0 ? '#ef4444' : '#10b981'};">+${totalReportTime} Days</strong></div></div><div style="flex:1; background:#f8fafc; padding:15px; border-radius:6px; border:1px solid #cbd5e1;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:10px;">Key Milestones</div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;"><span>1. Briefing:</span> <strong>${(wardData[currentWard] && wardData[currentWard]['ms_briefing']) ? formatDateGB(new Date(wardData[currentWard]['ms_briefing'])) : "TBC"}</strong></div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;"><span>2. Design:</span> <strong>${(wardData[currentWard] && wardData[currentWard]['ms_design']) ? formatDateGB(new Date(wardData[currentWard]['ms_design'])) : "TBC"}</strong></div><div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.85rem;"><span>3. Costing:</span> <strong>${(wardData[currentWard] && wardData[currentWard]['ms_costing']) ? formatDateGB(new Date(wardData[currentWard]['ms_costing'])) : "TBC"}</strong></div><div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>4. Delivery:</span> <strong>${(wardData[currentWard] && wardData[currentWard]['ms_delivery']) ? formatDateGB(new Date(wardData[currentWard]['ms_delivery'])) : "TBC"}</strong></div></div></div>`;
+
+                html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">1. Progress Status</h3><textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter monthly progress update here..." oninput="autoResize(this); saveComment('report_progress', this.value)">${(wardData[currentWard] && wardData[currentWard]['report_progress']) || ""}</textarea></div>`;
+
+                html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">2. Programme Timeline</h3>`;
+                let validTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    const id = findVal(t, 'activityid') || findVal(t, 'id') || "A"; const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
+                    return { desc: findVal(t, 'activity') || findVal(t, 'milestone') || "", startObj: savedStart ? new Date(savedStart) : null, endObj: calcEndObj(savedStart, (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || ""), savedStatus: (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started" };
+                }).filter(t => t.startObj && t.endObj);
+
+                if (validTasks.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">Add Start Dates and Durations in the Programme module to generate timeline.</p>`; } 
+                else {
+                    const minDate = new Date(Math.min(...validTasks.map(t => t.startObj))); const maxDate = new Date(Math.max(...validTasks.map(t => t.endObj)));
+                    let totalSpan = ((maxDate - minDate) / (1000 * 60 * 60 * 24)) || 1;
+                    let barsHtml = validTasks.map(t => {
+                        let left = ((t.startObj - minDate) / (1000 * 60 * 60 * 24)) / totalSpan * 100;
+                        let width = ((t.endObj - t.startObj) / (1000 * 60 * 60 * 24)) / totalSpan * 100; if (width < 2) width = 2; if (left + width > 100) width = 100 - left;
+                        let barColor = t.savedStatus === 'Complete' ? "#10b981" : t.savedStatus === 'In Progress' ? "#3b82f6" : t.savedStatus === 'Late' ? "#ef4444" : "#94a3b8";
+                        return `<div style="display:flex; align-items:center; margin-bottom:8px; font-size:0.75rem;"><div style="width:35%; padding-right:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-weight:bold; color:#334155;" title="${t.desc}">${t.desc}</div><div style="width:65%; position:relative; background:#f1f5f9; height:18px; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div style="position:absolute; left:${left}%; width:${width}%; background:${barColor}; height:100%; border-radius:3px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div></div></div>`;
+                    }).join('');
+                    html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:4px; background:white;"><div style="display:flex; margin-bottom:12px; font-size:0.7rem; color:#64748b; font-weight:bold;"><div style="width:35%;">Activity</div><div style="width:65%; display:flex; justify-content:space-between; border-bottom:1px solid #cbd5e1; padding-bottom:4px;"><span>${formatDateGB(minDate)}</span><span>${formatDateGB(maxDate)}</span></div></div>${barsHtml}</div>`;
+                }
+
+                html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Key Project Risks (Score 12+)</h3>`;
+                const highRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                    const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
+                    const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
+                    const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
+                    return { id, desc: findVal(t, 'riskdescription') || findVal(t, 'risk') || "", score: savedImp * savedProb, savedMit: (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "" };
+                }).filter(r => r.score >= 12).sort((a, b) => b.score - a.score);
+                
+                if (highRisks.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`; } 
+                else {
+                    let riskRows = highRisks.map(r => {
+                        let colorClass = r.score >= 15 ? "background-color:#fee2e2; -webkit-print-color-adjust: exact; print-color-adjust: exact;" : "background-color:#fef9c3; -webkit-print-color-adjust: exact; print-color-adjust: exact;";
+                        let scoreColor = r.score >= 15 ? "#ef4444" : "#d97706";
+                        return `<div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${r.id}</div><div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${r.desc}</div><div style="font-size:0.9rem; font-weight:bold; color:${scoreColor}; text-align:center; padding-top:4px;">${r.score}</div><div style="font-size:0.8rem; line-height:1.3; padding-top:4px; white-space:pre-wrap;">${r.savedMit || "<i>No mitigation recorded</i>"}</div></div>`;
+                    }).join('');
+                    html += `<div style="display:grid; grid-template-columns: 0.5fr 3fr 0.5fr 4fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${riskRows}`;
+                }
+
+                html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">4. Impact of Changes</h3><div style="display:flex; gap:20px;"><div style="flex:1; background:#f8fafc; padding:20px; border-radius:6px; border:1px solid #cbd5e1; text-align:center;"><div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Total Cost Impact</div><div style="font-size:1.8rem; color:#ef4444; font-weight:bold;">£${totalReportCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div style="font-size:0.7rem; color:#94a3b8; margin-top:5px;">(Includes Pending & Instructed)</div></div><div style="flex:1; background:#f8fafc; padding:20px; border-radius:6px; border:1px solid #cbd5e1; text-align:center;"><div style="font-size:0.8rem; color:#64748b; font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Total Time Impact</div><div style="font-size:1.8rem; color:#ef4444; font-weight:bold;">${totalReportTime} Days</div><div style="font-size:0.7rem; color:#94a3b8; margin-top:5px;">(Includes Pending & Instructed)</div></div></div></div>`;
+
+                html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">5. Changes in the Last Month</h3>`;
+                const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const recentChanges = changeTasks.filter(t => { const id = findVal(t, 'no') || findVal(t, 'id') || "CHG"; const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || ""; return savedDate ? new Date(savedDate) >= thirtyDaysAgo : false; });
+
+                if (recentChanges.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No changes requested in the last 30 days.</p>`; } 
+                else {
+                    let chgRows = recentChanges.map(t => {
+                        const id = findVal(t, 'no') || findVal(t, 'id') || "CHG"; const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Pending";
+                        const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || "";
+                        let colorClass = savedStatus === 'Instructed' ? "background-color:#dcfce7; -webkit-print-color-adjust: exact; print-color-adjust: exact;" : (savedStatus === 'Refused' || savedStatus === 'Cancelled') ? "background-color:#f1f5f9; color:#94a3b8; -webkit-print-color-adjust: exact; print-color-adjust: exact;" : "";
+                        return `<div class="lib-row" style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; align-items:start; ${colorClass} padding:8px; border-bottom:1px solid #e2e8f0; page-break-inside:avoid;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; padding-top:4px;">${id}</div><div style="font-size:0.8rem; font-weight:bold; padding-top:4px;">${findVal(t, 'description') || ""}</div><div style="font-size:0.8rem; padding-top:4px;">${(wardData[currentWard] && wardData[currentWard][id + '_req']) || findVal(t, 'requestor') || ""}</div><div style="font-size:0.8rem; padding-top:4px;">${savedDate ? formatDateGB(new Date(savedDate)) : ""}</div><div style="font-size:0.8rem; padding-top:4px; font-weight:bold;">£${parseFloat((wardData[currentWard] && wardData[currentWard][id + '_cost']) || findVal(t, 'cost£') || findVal(t, 'cost') || "0").toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div><div style="font-size:0.8rem; padding-top:4px;">${savedStatus}</div></div>`;
+                    }).join('');
+                    html += `<div style="display:grid; grid-template-columns: 0.5fr 3fr 1fr 1fr 1fr 1fr; gap:10px; padding:6px 8px; font-size:0.8rem; background:#334155; color:white; font-weight:bold; page-break-inside:avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>No.</div><div>Description</div><div>Requestor</div><div>Date</div><div>Cost Impact</div><div>Status</div></div>${chgRows}`;
+                }
+                body.innerHTML += html + `</div>`;
+            }
+            
+            else {
+                body.innerHTML = navButtons + pdfHeader;
+                const tasks = (type === 'enablers' ? db.enablers : db.moves).filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                
+                let compTasks = 0; let inProgTasks = 0; let lateTasks = 0;
+                let mappedTasks = tasks.map(t => {
+                    const id = findVal(t, 'taskid') || "T"; const savedStatus = (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'currentstatus') || "Not Started";
+                    const savedDue = (wardData[currentWard] && wardData[currentWard][id + '_due']) || findVal(t, 'datedue') || "";
+                    if (savedStatus === 'Complete') compTasks++; else if (savedStatus === 'Late') lateTasks++; else if (savedStatus === 'In Progress') inProgTasks++;
+                    let rowColor = "background-color: white;"; let borderL = "border-left: 4px solid transparent;";
+                    if (savedDue && savedStatus !== 'Complete') { const diffDays = Math.ceil((new Date(savedDue) - new Date()) / (1000 * 60 * 60 * 24)); if (diffDays < 0) { rowColor = "background-color: #fee2e2;"; borderL = "border-left: 4px solid #ef4444;"; if(savedStatus !== 'Late') lateTasks++; } else if (diffDays <= 7) { rowColor = "background-color: #fef9c3;"; borderL = "border-left: 4px solid #f59e0b;"; } }
+                    if (savedStatus === 'Complete') { rowColor = "background-color: #f8fafc; opacity: 0.6;"; borderL = "border-left: 4px solid #10b981;"; }
+                    return { id, desc: findVal(t, 'taskdescription') || "", savedWho: (wardData[currentWard] && wardData[currentWard][id + '_who']) || findVal(t, 'whoresponsible') || "", savedDue, savedStatus, savedNotes: (wardData[currentWard] && wardData[currentWard][id]) || "", rowColor, borderL };
+                });
+
+                body.innerHTML += `<div class="no-print" style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom:25px; page-break-inside:avoid;"><div style="flex:1; min-width:150px; background:#f8fafc; padding:15px; border-radius:8px; border:1px solid #cbd5e1; text-align:center;"><div style="font-size:0.75rem; color:#64748b; font-weight:bold; text-transform:uppercase;">Total Tasks</div><div style="font-size:1.8rem; color:#1e293b; font-weight:bold;">${tasks.length}</div></div><div style="flex:1; min-width:150px; background:#dcfce7; padding:15px; border-radius:8px; border:1px solid #86efac; text-align:center;"><div style="font-size:0.75rem; color:#166534; font-weight:bold; text-transform:uppercase;">Complete</div><div style="font-size:1.8rem; color:#15803d; font-weight:bold;">${compTasks}</div></div><div style="flex:1; min-width:150px; background:#dbeafe; padding:15px; border-radius:8px; border:1px solid #93c5fd; text-align:center;"><div style="font-size:0.75rem; color:#1e40af; font-weight:bold; text-transform:uppercase;">In Progress</div><div style="font-size:1.8rem; color:#1d4ed8; font-weight:bold;">${inProgTasks}</div></div><div style="flex:1; min-width:150px; background:#fee2e2; padding:15px; border-radius:8px; border:1px solid #fca5a5; text-align:center;"><div style="font-size:0.75rem; color:#991b1b; font-weight:bold; text-transform:uppercase;">Late / Overdue</div><div style="font-size:1.8rem; color:#b91c1c; font-weight:bold;">${lateTasks}</div></div></div>`;
+
+                let rows = mappedTasks.map(t => {
+                    const statusOptions = ['Not Started', 'In Progress', 'Complete', 'Late'].map(opt => `<option value="${opt}" ${t.savedStatus === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                    return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; gap:10px; align-items:start; ${t.rowColor} ${t.borderL} padding:6px 10px; border-bottom:1px solid #e2e8f0; min-height:40px; margin-bottom:4px; border-radius:0 4px 4px 0; transition:opacity 0.2s;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div style="font-size:0.85rem; font-weight:bold; color:#1e293b; line-height:1.2; padding-top:6px;">${t.desc}</div><div><select onchange="saveComment('${t.id}_who', this.value); showModule('${type}')" style="border:1px solid #cbd5e1; width:100%; font-size:0.75rem; padding:6px; margin-top:4px; border-radius:4px; background:white;">${getDirOptions(t.savedWho)}</select></div><div><input type="date" value="${t.savedDue}" onchange="saveComment('${t.id}_due', this.value); showModule('${type}')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:4px; border-radius:4px;"></div><div><select onchange="saveComment('${t.id}_status', this.value); showModule('${type}')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${statusOptions}</select></div><textarea class="comment-input" style="min-height:34px; height:34px; overflow-y:hidden; resize:none; font-size:0.8rem; padding:8px; border:1px solid #cbd5e1; width:100%; border-radius:4px; box-sizing:border-box;" placeholder="Add notes..." oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.savedNotes}</textarea></div>`;
+                }).join('');
+                body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 2.5fr 1fr 0.8fr 1fr 1.5fr; gap:10px; padding:10px; font-size:0.8rem; background:#1e293b; color:white; border-radius:6px; margin-bottom:10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Task Description</div><div>Owner</div><div>Due Date</div><div>Status</div><div>Notes</div></div>${rows}`;
+            }
+            setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100); switchView('view-content');
         }
 
-        function openModal() { 
-            document.getElementById('taskModal').style.display = 'flex'; 
-            ['standardDescField', 'taskFields', 'progFields', 'riskFields', 'changeFields', 'equipFields', 'dirFields'].forEach(id => document.getElementById(id).style.display = 'none');
-            if (currentType === 'risks') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('riskFields').style.display = 'block'; }
-            else if (currentType === 'programme') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('progFields').style.display = 'block'; document.getElementById('mLead').innerHTML = getDirOptions(''); }
-            else if (currentType === 'changes') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('changeFields').style.display = 'block'; document.getElementById('mChangeReq').innerHTML = getDirOptions(''); }
-            else if (currentType === 'equipment') { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('equipFields').style.display = 'block'; document.getElementById('mEquipRoom').value = (equipCurrentRoom === 'All') ? '' : equipCurrentRoom; document.getElementById('mEquipLoc').value = ''; }
-            else if (currentType === 'directory') { document.getElementById('dirFields').style.display = 'block'; }
-            else { document.getElementById('standardDescField').style.display = 'block'; document.getElementById('taskFields').style.display = 'block'; document.getElementById('mWho').innerHTML = getDirOptions(''); }
+        function promptNewRoom() { const r = prompt("Enter new room name/number:"); if (r) { if (!wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; if (!wardData[currentWard]['_customRooms'].includes(r)) wardData[currentWard]['_customRooms'].push(r); saveToCloud(); equipCurrentRoom = r; showModule('equipment'); } }
+        function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+        function saveComment(id, val) { if(!wardData[currentWard]) wardData[currentWard] = {}; wardData[currentWard][id] = val; saveToCloud(); }
+        function saveDirComment(name, val) { if (!wardData['GLOBAL_DIR_NOTES']) wardData['GLOBAL_DIR_NOTES'] = {}; wardData['GLOBAL_DIR_NOTES'][name] = val; saveToCloud(); }
+        function toggleRiskType(id, typeStr, isChecked) {
+            if (!wardData[currentWard]) wardData[currentWard] = {}; let current = wardData[currentWard][id + '_type'];
+            if (current === undefined) { const task = db.risks.find(t => (findVal(t, 'riskid') || findVal(t, 'id')) === id); current = task ? (findVal(task, 'type') || "") : ""; }
+            let arr = current ? current.split(', ') : []; if (isChecked && !arr.includes(typeStr)) arr.push(typeStr); if (!isChecked) arr = arr.filter(x => x !== typeStr);
+            let newVal = arr.join(', '); wardData[currentWard][id + '_type'] = newVal; saveToCloud(); document.getElementById('label_' + id).innerText = newVal || "Select...";
         }
-        function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
+
+        function downloadPDF() {
+            document.querySelectorAll('.no-print').forEach(el => el.style.display = 'none');
+            let swapList = [];
+            document.querySelectorAll('textarea, input[type="date"], input[type="text"], input[type="number"], select').forEach(el => {
+                if (el.closest('#taskModal')) return; const div = document.createElement('div');
+                if (el.type === 'date' && el.value) { const [yyyy, mm, dd] = el.value.split('-'); div.innerText = `${dd}/${mm}/${yyyy}`; } else if (el.tagName === 'SELECT') { div.innerText = el.options[el.selectedIndex] ? el.options[el.selectedIndex].text : ""; } else { div.innerText = el.value || ""; }
+                div.style.width = '100%'; div.style.fontSize = getComputedStyle(el).fontSize; div.style.padding = '4px'; div.style.border = '1px solid #ccc'; div.style.fontFamily = 'sans-serif'; div.style.boxSizing = 'border-box';
+                if (el.tagName === 'TEXTAREA') { div.style.height = 'auto'; div.style.whiteSpace = 'pre-wrap'; div.style.lineHeight = '1.3'; } else { div.style.minHeight = '24px'; div.style.display = 'flex'; div.style.alignItems = 'center'; div.style.overflow = 'hidden'; }
+                el.style.display = 'none'; el.parentNode.insertBefore(div, el); swapList.push({ area: el, replacement: div });
+            });
+            const element = document.getElementById('moduleBody'); const title = document.getElementById('moduleTitle').innerText;
+            const orient = (currentType === 'brief' || currentType === 'reports') ? 'portrait' : 'landscape';
+            const opt = { margin: [0.4, 0.3, 0.4, 0.3], filename: `${currentWard}_${title}.pdf`, image: { type: 'jpeg', quality: 1.0 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: orient }, pagebreak: { mode: ['css', 'legacy'], avoid: ['.lib-row', '.row-header', '.scope-category', '.report-header'] } };
+            html2pdf().set(opt).from(element).save().then(() => { document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex'); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; }); });
+        }
         
         function saveNewTask() {
             if (currentType === 'directory') {
@@ -419,7 +685,6 @@
                 newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
             }
 
-            // PUSH THE NEW TASK DEFINITION TO THE CLOUD
             if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = [];
             wardData['CUSTOM_ITEMS'].push({ type: currentType, ward: currentWard, task: newTask });
             saveToCloud();
@@ -429,7 +694,6 @@
 
         function findVal(obj, key) { if (!obj) return ""; const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, '')); return k ? obj[k] : ""; }
         function downloadData() { const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(JSON.stringify(wardData)); const linkElement = document.createElement('a'); linkElement.setAttribute('href', dataUri); linkElement.setAttribute('download', `Project_Backup_${new Date().toISOString().slice(0,10)}.json`); linkElement.click(); }
-        
         function uploadData(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { wardData = JSON.parse(e.target.result); saveToCloud(); alert("Backup restored and pushed to Cloud!"); location.reload(); } catch (err) { alert("Error loading file."); } }; reader.readAsText(file); }
     </script>
 </body>
