@@ -425,7 +425,7 @@
                     const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
                     const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
                     const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
-                    const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
+                    const savedMit = (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingactions') || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "";
                     return { id, desc, savedType, savedImp, savedProb, score: (savedImp * savedProb), savedMit };
                 });
                 if (riskFilterLevel > 0) mappedTasks = mappedTasks.filter(t => t.score >= riskFilterLevel);
@@ -439,7 +439,11 @@
                         else if (t.score >= 8) { colorClass = "background-color:#fffbeb;"; scoreColor = "#d97706"; borderL = "border-left: 4px solid #f59e0b;"; }
                         else if (t.score > 0) { borderL = "border-left: 4px solid #10b981;"; }
                         const makeOpts = (sel) => [1,2,3,4,5].map(n => `<option value="${n}" ${parseInt(sel) === n ? 'selected' : ''}>${n}</option>`).join('');
-                        const ddHtml = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'].map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${t.savedType.includes(ty)?'checked':''} onchange="toggleRiskType('${t.id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
+                        
+                        // BULLETPROOF STRING CONVERSION TO PREVENT SILENT .INCLUDES CRASH
+                        const safeTypeString = String(t.savedType || "");
+                        
+                        const ddHtml = ['Programme', 'Cost', 'Disruption', 'H&S', 'Compliance'].map(ty => `<label style="display:block; padding:2px; font-size:0.75rem; cursor:pointer;"><input type="checkbox" style="margin-right:4px;" value="${ty}" ${safeTypeString.includes(ty)?'checked':''} onchange="toggleRiskType('${t.id}', '${ty}', this.checked)"> ${ty}</label>`).join('');
                         return `<div class="lib-row" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; align-items:start; ${colorClass} ${borderL} padding:6px 10px; border-bottom:1px solid #e2e8f0; min-height:40px; margin-bottom:4px; border-radius:0 4px 4px 0;"><div style="font-size:0.75rem; color:#64748b; padding-top:8px;">${t.id}</div><div style="font-size:0.85rem; font-weight:bold; color:#1e293b; padding-top:6px;">${t.desc}</div><div style="position:relative; margin-top:4px;"><div id="label_${t.id}" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; padding:6px; border-radius:4px; cursor:pointer; min-height:26px;">${t.savedType || "Select Type..."}</div><div style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #cbd5e1; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:50; padding:6px; border-radius:4px;" onmouseleave="this.style.display='none'">${ddHtml}</div></div><div><select onchange="saveComment('${t.id}_imp', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedImp)}</select></div><div><select onchange="saveComment('${t.id}_prob', this.value); showModule('risks')" style="border:1px solid #cbd5e1; background:white; font-size:0.75rem; width:100%; margin-top:4px; padding:6px; border-radius:4px;">${makeOpts(t.savedProb)}</select></div><div style="font-size:1.1rem; font-weight:bold; color:${scoreColor}; padding-top:8px; text-align:center;">${t.score}</div><textarea class="comment-input" style="min-height:34px; height:34px; overflow-y:hidden; resize:none; font-size:0.8rem; padding:8px; border:1px solid #cbd5e1; border-radius:4px; width:100%; box-sizing:border-box;" placeholder="Add mitigations..." oninput="autoResize(this); saveComment('${t.id}', this.value)">${t.savedMit}</textarea></div>`;
                     }).join('');
                     body.innerHTML += `<div class="row-header" style="page-break-inside:avoid; grid-template-columns: 0.4fr 1.5fr 1.2fr 0.6fr 0.6fr 0.5fr 2fr; gap:10px; padding:10px; font-size:0.8rem; background:#1e293b; color:white; border-radius:6px; margin-bottom:10px; -webkit-print-color-adjust: exact; print-color-adjust: exact;"><div>ID</div><div>Risk Description</div><div>Type</div><div>Impact</div><div>Prob</div><div style="text-align:center;">Score</div><div>Mitigating Action/s</div></div>${rows}`;
@@ -588,7 +592,7 @@
                     const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                     const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
                     const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
-                    return { id, desc: findVal(t, 'riskdescription') || findVal(t, 'risk') || "", score: savedImp * savedProb, savedMit: (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "" };
+                    return { id, desc: findVal(t, 'riskdescription') || findVal(t, 'risk') || "", score: savedImp * savedProb, savedMit: (wardData[currentWard] && wardData[currentWard][id]) || findVal(t, 'mitigatingactions') || findVal(t, 'mitigatingaction/s') || findVal(t, 'mitigationplan') || "" };
                 }).filter(r => r.score >= 12).sort((a, b) => b.score - a.score);
                 
                 if (highRisks.length === 0) { html += `<p style="font-size:0.85rem; color:#64748b; font-style:italic;">No risks currently logged with a score of 12 or more.</p>`; } 
@@ -651,7 +655,7 @@
             setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100); switchView('view-content');
         }
 
-        // GRANULAR WRITE FUNCTIONS - THE FIX
+        // GRANULAR WRITE FUNCTIONS
         function promptNewRoom() { 
             const r = prompt("Enter new room name/number:"); 
             if (r) { 
@@ -717,59 +721,79 @@
         function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
         
         function saveNewTask() {
-            if (currentType === 'directory') {
-                const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
-                if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
-                const dirKey = "DIR_" + Date.now();
-                const newDir = { name: name, email: email, role: role };
-                wardData['GLOBAL_DIR'][dirKey] = newDir; 
-                if (auth.currentUser) database.ref(`pmoData/GLOBAL_DIR/${dirKey}`).set(newDir);
-                ['mDirName', 'mDirEmail', 'mDirRole'].forEach(id => document.getElementById(id).value = ''); closeModal(); showModule(currentType); return;
-            }
-
-            const desc = document.getElementById('mDesc').value; if (!desc) return alert("Enter description");
-            if (!wardData[currentWard]) wardData[currentWard] = {}; 
-
-            let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : currentType === 'risks' ? "RSK-" : "NEW-"; 
-            const newId = prefix + Math.floor(Math.random() * 9999);
-            let newTask = {};
-            
-            if (currentType === 'risks') {
-                const selectedTypes = Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb => cb.value).join(', ');
-                newTask = { "riskid": newId, "riskdescription": desc, "ward": currentWard, "type": selectedTypes, "impact": document.getElementById('mImp').value, "prob": document.getElementById('mProb').value, "mitigatingaction/s": "" };
-                wardData[currentWard][newId + '_type'] = selectedTypes;
-                document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
-            } else if (currentType === 'programme') {
-                newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": document.getElementById('mLead').value, "startdate": document.getElementById('mStart').value, "duration": document.getElementById('mDur').value, "status": "Not Started" };
-            } else if (currentType === 'changes') {
-                newTask = { "no": newId, "description": desc, "ward": currentWard, "requestor": document.getElementById('mChangeReq').value, "date": document.getElementById('mChangeDate').value, "cost": document.getElementById('mChangeCost').value, "time": document.getElementById('mChangeTime').value, "fundingsource": document.getElementById('mChangeFund').value, "status": document.getElementById('mChangeStatus').value };
-            } else if (currentType === 'equipment') {
-                const room = document.getElementById('mEquipRoom').value;
-                if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; 
-                if (room && !wardData[currentWard]['_customRooms'].includes(room)) {
-                    wardData[currentWard]['_customRooms'].push(room);
-                    if (auth.currentUser) database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);
+            try {
+                if (currentType === 'directory') {
+                    const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
+                    if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
+                    const dirKey = "DIR_" + Date.now();
+                    const newDir = { name: name, email: email, role: role };
+                    wardData['GLOBAL_DIR'][dirKey] = newDir; 
+                    if (auth.currentUser) database.ref(`pmoData/GLOBAL_DIR/${dirKey}`).set(newDir);
+                    ['mDirName', 'mDirEmail', 'mDirRole'].forEach(id => document.getElementById(id).value = ''); closeModal(); showModule(currentType); return;
                 }
-                const eqKey = "EQ_" + Date.now();
-                if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
-                const newEq = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
-                wardData[currentWard]['equipmentLog'][eqKey] = newEq;
-                if (auth.currentUser) database.ref(`pmoData/${currentWard}/equipmentLog/${eqKey}`).set(newEq);
-                document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
-            } else {
-                newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
-            }
 
-            const ciKey = "CI_" + Date.now();
-            if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
-            wardData['CUSTOM_ITEMS'][ciKey] = { type: currentType, ward: currentWard, task: newTask };
-            
-            // GRANULAR WRITE - PREVENTS CONCURRENCY CRASHES
-            if (auth.currentUser) {
-                database.ref(`pmoData/CUSTOM_ITEMS/${ciKey}`).set({ type: currentType, ward: currentWard, task: newTask });
-            }
+                const desc = document.getElementById('mDesc').value; if (!desc) return alert("Enter description");
+                if (!wardData[currentWard]) wardData[currentWard] = {}; 
 
-            document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
+                let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : currentType === 'risks' ? "RSK-" : "NEW-"; 
+                const newId = prefix + Math.floor(Math.random() * 9999);
+                let newTask = {};
+                
+                if (currentType === 'risks') {
+                    const selectedTypes = Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb => cb.value).join(', ');
+                    const impVal = document.getElementById('mImp').value || "1";
+                    const probVal = document.getElementById('mProb').value || "1";
+
+                    newTask = { "riskid": newId, "riskdescription": desc, "ward": currentWard, "type": selectedTypes, "impact": impVal, "prob": probVal, "mitigatingactions": "" };
+                    
+                    wardData[currentWard][newId + '_type'] = selectedTypes;
+                    wardData[currentWard][newId + '_imp'] = impVal;
+                    wardData[currentWard][newId + '_prob'] = probVal;
+                    
+                    if (auth.currentUser) {
+                        database.ref(`pmoData/${currentWard}/${newId}_type`).set(selectedTypes);
+                        database.ref(`pmoData/${currentWard}/${newId}_imp`).set(impVal);
+                        database.ref(`pmoData/${currentWard}/${newId}_prob`).set(probVal);
+                    }
+
+                    document.querySelectorAll('.risk-type-cb').forEach(cb => cb.checked = false);
+                } else if (currentType === 'programme') {
+                    newTask = { "activityid": newId, "activity": desc, "ward": currentWard, "lead": document.getElementById('mLead').value, "startdate": document.getElementById('mStart').value, "duration": document.getElementById('mDur').value, "status": "Not Started" };
+                } else if (currentType === 'changes') {
+                    newTask = { "no": newId, "description": desc, "ward": currentWard, "requestor": document.getElementById('mChangeReq').value, "date": document.getElementById('mChangeDate').value, "cost": document.getElementById('mChangeCost').value, "time": document.getElementById('mChangeTime').value, "fundingsource": document.getElementById('mChangeFund').value, "status": document.getElementById('mChangeStatus').value };
+                } else if (currentType === 'equipment') {
+                    const room = document.getElementById('mEquipRoom').value;
+                    if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; 
+                    if (room && !wardData[currentWard]['_customRooms'].includes(room)) {
+                        wardData[currentWard]['_customRooms'].push(room);
+                        if (auth.currentUser) database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);
+                    }
+                    const eqKey = "EQ_" + Date.now();
+                    if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
+                    const newEq = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
+                    wardData[currentWard]['equipmentLog'][eqKey] = newEq;
+                    if (auth.currentUser) database.ref(`pmoData/${currentWard}/equipmentLog/${eqKey}`).set(newEq);
+                    document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
+                } else {
+                    newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
+                }
+
+                const ciKey = "CI_" + Date.now();
+                if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
+                wardData['CUSTOM_ITEMS'][ciKey] = { type: currentType, ward: currentWard, task: newTask };
+                
+                if (auth.currentUser) {
+                    database.ref(`pmoData/CUSTOM_ITEMS/${ciKey}`).set({ type: currentType, ward: currentWard, task: newTask });
+                }
+
+                document.getElementById('mDesc').value = ''; 
+                closeModal(); 
+                showModule(currentType);
+
+            } catch (error) {
+                console.error("Save Error:", error);
+                alert("A system error occurred while trying to save. Please take a screenshot of this error: " + error.message);
+            }
         }
 
         function findVal(obj, key) { if (!obj) return ""; const k = Object.keys(obj).find(k => k.toLowerCase().replace(/\s/g, '') === key.toLowerCase().replace(/\s/g, '')); return k ? obj[k] : ""; }
