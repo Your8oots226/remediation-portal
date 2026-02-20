@@ -237,14 +237,35 @@
         let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
-        // REAL-TIME LISTENER
+        // REAL-TIME LISTENER (WITH ARRAY-POISONING FIX)
         function startDatabaseSync() {
             database.ref('pmoData').on('value', (snapshot) => {
-                if (snapshot.exists()) wardData = snapshot.val();
+                if (snapshot.exists()) {
+                    let rawData = snapshot.val();
+
+                    // 1. SANITIZER: Instantly convert poisoned arrays back into objects 
+                    if (Array.isArray(rawData['CUSTOM_ITEMS'])) {
+                        let temp = {}; rawData['CUSTOM_ITEMS'].forEach((item, idx) => { if (item) temp["CI_" + idx] = item; });
+                        rawData['CUSTOM_ITEMS'] = temp;
+                    }
+                    if (Array.isArray(rawData['GLOBAL_DIR'])) {
+                        let temp = {}; rawData['GLOBAL_DIR'].forEach((item, idx) => { if (item) temp["DIR_" + idx] = item; });
+                        rawData['GLOBAL_DIR'] = temp;
+                    }
+                    Object.keys(rawData).forEach(k => {
+                        if (rawData[k] && Array.isArray(rawData[k]['equipmentLog'])) {
+                            let temp = {}; rawData[k]['equipmentLog'].forEach((item, idx) => { if (item) temp["EQ_" + idx] = item; });
+                            rawData[k]['equipmentLog'] = temp;
+                        }
+                    });
+
+                    wardData = rawData;
+                }
                 
-                // INJECT CLOUD-SAVED CUSTOM TASKS (Fixed Object Conversion Bug)
+                // 2. INJECT CLOUD-SAVED CUSTOM TASKS (With crash-protection null checks)
                 if (wardData['CUSTOM_ITEMS']) {
                     Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => {
+                        if (!ci || !ci.task) return; // Crash protection
                         if (ci.type === 'risks' && !db.risks.find(t => (t.riskid||t.id) === ci.task.riskid)) db.risks.push(ci.task);
                         if (ci.type === 'programme' && !db.programme.find(t => (t.activityid||t.id) === ci.task.activityid)) db.programme.push(ci.task);
                         if (ci.type === 'changes' && !db.changes.find(t => (t.no||t.id) === ci.task.no)) db.changes.push(ci.task);
@@ -347,7 +368,7 @@
 
         function getDirOptions(selected) {
             let names = db.directory.map(d => findVal(d, 'name') || findVal(d, 'contact')).filter(n => n);
-            if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(item => { if (item.name) names.push(item.name); });
+            if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(item => { if (item && item.name) names.push(item.name); });
             names = [...new Set(names)].sort(); let opts = `<option value="">Select...</option>`;
             if (selected && !names.includes(selected)) opts += `<option value="${selected}" selected>${selected}</option>`;
             names.forEach(n => { opts += `<option value="${n}" ${n === selected ? 'selected' : ''}>${n}</option>`; }); return opts;
@@ -398,7 +419,7 @@
                         const desc = findVal(i, 'scopeitemdescription') || findVal(i, 'description') || findVal(i, 'item') || "Item";
                         const saved = (wardData[currentWard] && wardData[currentWard][desc]) || "";
                         let isFilled = saved.trim() !== "" ? "border-left: 3px solid #10b981;" : "border-left: 3px solid transparent;";
-                        const safeDesc = desc.replace(/'/g, "\\'").replace(/"/g, '&quot;'); // Fixes scope strings with quotes breaking HTML
+                        const safeDesc = desc.replace(/'/g, "\\'").replace(/"/g, '&quot;'); 
                         return `<div class="lib-row" style="page-break-inside:avoid; display:flex; gap:15px; padding:10px 15px; border-bottom:1px solid #f1f5f9; align-items:start; ${isFilled} background:white; transition:background 0.2s;"><div style="font-size:0.85rem; line-height:1.4; font-weight:600; color:#334155; width:40%; padding-top:6px;">${desc}</div><textarea class="comment-input" style="min-height:36px; height:36px; overflow-y:hidden; font-size:0.8rem; padding:8px 10px; border:1px solid #cbd5e1; border-radius:4px; width:60%; resize:none; box-sizing:border-box; background:#f8fafc;" placeholder="Enter scope notes..." oninput="autoResize(this); saveComment('${safeDesc}', this.value); if(this.value.trim() !== '') { this.parentElement.style.borderLeft = '3px solid #10b981'; } else { this.parentElement.style.borderLeft = '3px solid transparent'; }">${saved}</textarea></div>`;
                     }).join('');
                     body.innerHTML += `<div class="scope-category" style="margin-bottom:20px; page-break-inside:avoid; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02);"><div class="row-header" style="background:#f8fafc; color:#1e293b; padding:12px 15px; font-size:0.9rem; font-weight:bold; border-bottom:1px solid #e2e8f0;">📂 ${cat}</div>${rows}</div>`;
@@ -408,7 +429,7 @@
             
             else if (type === 'directory') {
                 body.innerHTML = navButtons + pdfHeader;
-                let contacts = [...db.directory]; if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(c => contacts.push(c));
+                let contacts = [...db.directory]; if (wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(c => { if(c) contacts.push(c) });
                 let rows = contacts.map((c, index) => {
                     const name = findVal(c, 'name') || findVal(c, 'contact') || c.name || "Unknown"; const email = findVal(c, 'email') || c.email || ""; const role = findVal(c, 'role') || findVal(c, 'company') || c.role || "";
                     const savedNotes = (wardData['GLOBAL_DIR_NOTES'] && wardData['GLOBAL_DIR_NOTES'][name]) || "";
@@ -615,7 +636,6 @@
                 
                 let compTasks = 0; let inProgTasks = 0; let lateTasks = 0;
                 let mappedTasks = tasks.map(t => {
-                    // ID PREFIX FIX FOR ENABLERS VS MOVES
                     const baseId = findVal(t, 'taskid') || findVal(t, 'id') || "T"; 
                     const id = (type === 'enablers' ? 'EN-' : 'MV-') + baseId;
 
@@ -666,7 +686,7 @@
             html2pdf().set(opt).from(element).save().then(() => { document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex'); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; }); });
         }
 
-        // RESTORED MODAL FUNCTIONS
+        // --- NEW TASK ENGINE (CRASH-PROOFED WITH INSTANT UI UPDATES) ---
         function openModal() { 
             document.getElementById('taskModal').style.display = 'flex'; 
             ['standardDescField', 'taskFields', 'progFields', 'riskFields', 'changeFields', 'equipFields', 'dirFields'].forEach(id => document.getElementById(id).style.display = 'none');
@@ -683,11 +703,13 @@
             if (currentType === 'directory') {
                 const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
                 if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
-                wardData['GLOBAL_DIR'][Date.now()] = { name: name, email: email, role: role }; saveToCloud();
+                wardData['GLOBAL_DIR']["DIR_" + Date.now()] = { name: name, email: email, role: role }; 
+                saveToCloud();
                 ['mDirName', 'mDirEmail', 'mDirRole'].forEach(id => document.getElementById(id).value = ''); closeModal(); showModule(currentType); return;
             }
             const desc = document.getElementById('mDesc').value; if (!desc) return alert("Enter description");
-            let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : "NEW-"; const newId = prefix + Math.floor(Math.random() * 9999);
+            let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : currentType === 'risks' ? "RSK-" : "NEW-"; 
+            const newId = prefix + Math.floor(Math.random() * 9999);
             
             let newTask = {};
             if (currentType === 'risks') {
@@ -703,7 +725,7 @@
                 const room = document.getElementById('mEquipRoom').value;
                 if (room && !wardData[currentWard]['_customRooms']) wardData[currentWard]['_customRooms'] = []; if (room && !wardData[currentWard]['_customRooms'].includes(room)) wardData[currentWard]['_customRooms'].push(room);
                 if (!wardData[currentWard]['equipmentLog']) wardData[currentWard]['equipmentLog'] = {};
-                wardData[currentWard]['equipmentLog'][newId] = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
+                wardData[currentWard]['equipmentLog']["EQ_" + Date.now()] = { "id": newId, "desc": desc, "room": room, "group": document.getElementById('mEquipGroup').value, "loc": document.getElementById('mEquipLoc').value, "action": document.getElementById('mEquipAction').value, "notes": "" };
                 saveToCloud(); document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType); return;
             } else {
                 newTask = { "taskid": newId, "taskdescription": desc, "ward": currentWard, "whoresponsible": document.getElementById('mWho').value, "datedue": document.getElementById('mDue').value, "currentstatus": document.getElementById('mStatus').value };
@@ -711,6 +733,14 @@
 
             if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
             wardData['CUSTOM_ITEMS']["CI_" + Date.now()] = { type: currentType, ward: currentWard, task: newTask };
+            
+            // INSTANT UI UPDATE: Push to local array so the item appears before cloud sync finishes
+            if (currentType === 'risks') db.risks.push(newTask);
+            else if (currentType === 'programme') db.programme.push(newTask);
+            else if (currentType === 'changes') db.changes.push(newTask);
+            else if (currentType === 'enablers') db.enablers.push(newTask);
+            else if (currentType === 'moves') db.moves.push(newTask);
+
             saveToCloud();
 
             document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
