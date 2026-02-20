@@ -229,7 +229,6 @@
             const pass = document.getElementById('loginPass').value;
             const errDiv = document.getElementById('loginError');
             errDiv.innerText = "Authenticating...";
-            
             auth.signInWithEmailAndPassword(email, pass).catch(error => { errDiv.innerText = "Incorrect Email or Password."; });
         }
 
@@ -237,42 +236,18 @@
         let currentWard = ""; let currentType = ""; let wardData = {};
         let equipCurrentRoom = "All"; let equipSortBy = "room"; let scopeFilterActive = false; let riskFilterLevel = 0;
 
-        // REAL-TIME LISTENER
+        // REAL-TIME LISTENER - ARCHITECTURE UPDATE
+        // We no longer permanently mutate local arrays. We just keep WardData updated!
         function startDatabaseSync() {
             database.ref('pmoData').on('value', (snapshot) => {
                 if (snapshot.exists()) {
                     let rawData = snapshot.val();
-
-                    // SANITIZER: Instantly convert poisoned arrays back into objects 
-                    if (Array.isArray(rawData['CUSTOM_ITEMS'])) {
-                        let temp = {}; rawData['CUSTOM_ITEMS'].forEach((item, idx) => { if (item) temp["CI_" + idx] = item; });
-                        rawData['CUSTOM_ITEMS'] = temp;
-                    }
-                    if (Array.isArray(rawData['GLOBAL_DIR'])) {
-                        let temp = {}; rawData['GLOBAL_DIR'].forEach((item, idx) => { if (item) temp["DIR_" + idx] = item; });
-                        rawData['GLOBAL_DIR'] = temp;
-                    }
-                    Object.keys(rawData).forEach(k => {
-                        if (rawData[k] && Array.isArray(rawData[k]['equipmentLog'])) {
-                            let temp = {}; rawData[k]['equipmentLog'].forEach((item, idx) => { if (item) temp["EQ_" + idx] = item; });
-                            rawData[k]['equipmentLog'] = temp;
-                        }
-                    });
-
+                    if (Array.isArray(rawData['CUSTOM_ITEMS'])) { let temp = {}; rawData['CUSTOM_ITEMS'].forEach((item, idx) => { if (item) temp["CI_" + idx] = item; }); rawData['CUSTOM_ITEMS'] = temp; }
+                    if (Array.isArray(rawData['GLOBAL_DIR'])) { let temp = {}; rawData['GLOBAL_DIR'].forEach((item, idx) => { if (item) temp["DIR_" + idx] = item; }); rawData['GLOBAL_DIR'] = temp; }
+                    Object.keys(rawData).forEach(k => { if (rawData[k] && Array.isArray(rawData[k]['equipmentLog'])) { let temp = {}; rawData[k]['equipmentLog'].forEach((item, idx) => { if (item) temp["EQ_" + idx] = item; }); rawData[k]['equipmentLog'] = temp; } });
                     wardData = rawData;
                 }
                 
-                if (wardData['CUSTOM_ITEMS']) {
-                    Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => {
-                        if (!ci || !ci.task) return; 
-                        if (ci.type === 'risks' && !db.risks.find(t => (t.riskid||t.id) === ci.task.riskid)) db.risks.push(ci.task);
-                        if (ci.type === 'programme' && !db.programme.find(t => (t.activityid||t.id) === ci.task.activityid)) db.programme.push(ci.task);
-                        if (ci.type === 'changes' && !db.changes.find(t => (t.no||t.id) === ci.task.no)) db.changes.push(ci.task);
-                        if (ci.type === 'enablers' && !db.enablers.find(t => (t.taskid||t.id) === ci.task.taskid)) db.enablers.push(ci.task);
-                        if (ci.type === 'moves' && !db.moves.find(t => (t.taskid||t.id) === ci.task.taskid)) db.moves.push(ci.task);
-                    });
-                }
-
                 const activeEl = document.activeElement;
                 const isTyping = activeEl && (activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT' || (activeEl.tagName === 'INPUT' && activeEl.type !== 'file'));
                 
@@ -284,21 +259,7 @@
             });
         }
 
-        // ==========================================
-        // THE CURE: CRASH-PROOF FIREBASE SAVE ENGINE
-        // ==========================================
-        function saveToCloud() { 
-            if (auth.currentUser) {
-                try {
-                    // Firebase completely crashes if it encounters 'undefined' values anywhere in the object.
-                    // This creates a perfect, pristine copy of the data with all 'undefined' ghosts stripped out automatically.
-                    const cleanData = JSON.parse(JSON.stringify(wardData));
-                    database.ref('pmoData').set(cleanData); 
-                } catch(err) {
-                    console.error("Firebase Sync Blocked:", err);
-                }
-            } 
-        }
+        function saveToCloud() { if (auth.currentUser) { try { const cleanData = JSON.parse(JSON.stringify(wardData)); database.ref('pmoData').set(cleanData); } catch(err) { console.error("Firebase Sync Blocked:", err); } } }
 
         function handleFile(event) {
             const file = event.target.files[0];
@@ -326,18 +287,22 @@
             const customProjects = Object.keys(wardData).filter(k => k !== 'GLOBAL_DIR' && k !== 'GLOBAL_DIR_NOTES' && k !== 'HIDDEN_PROJECTS' && k !== 'CUSTOM_ITEMS' && !excelProjects.includes(k) && !hiddenList.includes(k));
             const allProjects = [...new Set([...excelProjects, ...customProjects])].sort();
 
+            // DYNAMICALLY MERGE DATA FOR DASHBOARD
+            let allChanges = [...db.changes]; let allRisks = [...db.risks];
+            if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.task) { if (ci.type === 'changes') allChanges.push(ci.task); if (ci.type === 'risks') allRisks.push(ci.task); } }); }
+
             let totalBase = 0; let totalCur = 0; let totalRisks = 0;
             allProjects.forEach(proj => {
                 let pBase = parseFloat(wardData[proj] && wardData[proj]['baseline_budget']) || 0; totalBase += pBase;
                 let pChanges = 0;
-                db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; }).forEach(t => {
+                allChanges.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; }).forEach(t => {
                     const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
                     const savedCost = (wardData[proj] && wardData[proj][id + '_cost']) !== undefined ? wardData[proj][id + '_cost'] : findVal(t, 'cost£') || findVal(t, 'cost') || "";
                     const savedStatus = (wardData[proj] && wardData[proj][id + '_status']) || findVal(t, 'status') || "Pending";
                     if (savedStatus === 'Instructed' || savedStatus === 'Pending') { pChanges += parseFloat(savedCost) || 0; }
                 });
                 totalCur += (pBase + pChanges);
-                db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; }).forEach(t => {
+                allRisks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === proj || !w; }).forEach(t => {
                     const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                     const savedImp = parseInt((wardData[proj] && wardData[proj][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
                     const savedProb = parseInt((wardData[proj] && wardData[proj][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
@@ -452,7 +417,12 @@
             
             else if (type === 'risks') { 
                 body.innerHTML = navButtons + pdfHeader;
-                let mappedTasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                // DYNAMIC MERGE: Excel + Cloud
+                let baseTasks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'risks' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
+                let allTasks = [...baseTasks, ...customTasks];
+
+                let mappedTasks = allTasks.map(t => {
                     const id = findVal(t, 'riskid') || findVal(t, 'id') || "R"; const desc = findVal(t, 'riskdescription') || findVal(t, 'risk') || "";
                     const savedType = (wardData[currentWard] && wardData[currentWard][id + '_type']) !== undefined ? wardData[currentWard][id + '_type'] : findVal(t, 'type') || "";
                     const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
@@ -480,7 +450,12 @@
             
             else if (type === 'programme') {
                 body.innerHTML = navButtons + pdfHeader;
-                let validTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                // DYNAMIC MERGE
+                let baseTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'programme' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
+                let allTasks = [...baseTasks, ...customTasks];
+
+                let validTasks = allTasks.map(t => {
                     const id = findVal(t, 'activityid') || findVal(t, 'id') || "A"; const desc = findVal(t, 'activity') || findVal(t, 'milestone') || "";
                     const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
                     const savedDur = (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || "";
@@ -509,8 +484,13 @@
             
             else if (type === 'changes') {
                 body.innerHTML = navButtons + pdfHeader;
+                // DYNAMIC MERGE
+                let baseTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === 'changes' && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
+                let allTasks = [...baseTasks, ...customTasks];
+
                 let totalCost = 0; let totalTime = 0;
-                let rows = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                let rows = allTasks.map(t => {
                     const id = findVal(t, 'no') || findVal(t, 'id') || "CHG"; const desc = findVal(t, 'description') || "";
                     const savedReq = (wardData[currentWard] && wardData[currentWard][id + '_req']) || findVal(t, 'requestor') || "";
                     const savedDate = (wardData[currentWard] && wardData[currentWard][id + '_date']) || findVal(t, 'date') || "";
@@ -569,7 +549,11 @@
             
             else if (type === 'reports') {
                 body.innerHTML = navButtons + pdfHeader;
-                const changeTasks = db.changes.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                // DYNAMIC MERGE FOR REPORTS
+                let allChanges = [...db.changes]; let allProg = [...db.programme]; let allRisks = [...db.risks];
+                if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.task) { if (ci.type === 'changes') allChanges.push(ci.task); if (ci.type === 'programme') allProg.push(ci.task); if (ci.type === 'risks') allRisks.push(ci.task); } }); }
+
+                const changeTasks = allChanges.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
                 let totalReportCost = 0; let totalReportTime = 0;
                 changeTasks.forEach(t => {
                     const id = findVal(t, 'no') || findVal(t, 'id') || "CHG";
@@ -586,7 +570,7 @@
                 html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">1. Progress Status</h3><textarea class="comment-input" style="min-height:100px; width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.85rem; box-sizing:border-box; font-family:sans-serif;" placeholder="Enter monthly progress update here..." oninput="autoResize(this); saveComment('report_progress', this.value)">${(wardData[currentWard] && wardData[currentWard]['report_progress']) || ""}</textarea></div>`;
 
                 html += `<div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">2. Programme Timeline</h3>`;
-                let validTasks = db.programme.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                let validTasks = allProg.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
                     const id = findVal(t, 'activityid') || findVal(t, 'id') || "A"; const savedStart = (wardData[currentWard] && wardData[currentWard][id + '_start']) || findVal(t, 'startdate') || "";
                     return { desc: findVal(t, 'activity') || findVal(t, 'milestone') || "", startObj: savedStart ? new Date(savedStart) : null, endObj: calcEndObj(savedStart, (wardData[currentWard] && wardData[currentWard][id + '_dur']) || findVal(t, 'duration') || ""), savedStatus: (wardData[currentWard] && wardData[currentWard][id + '_status']) || findVal(t, 'status') || "Not Started" };
                 }).filter(t => t.startObj && t.endObj);
@@ -605,7 +589,7 @@
                 }
 
                 html += `</div><div style="margin-bottom:25px; page-break-inside:avoid;"><h3 style="color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:5px; margin-bottom:10px;">3. Key Project Risks (Score 12+)</h3>`;
-                const highRisks = db.risks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
+                const highRisks = allRisks.filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; }).map(t => {
                     const id = findVal(t, 'riskid') || findVal(t, 'id') || "R";
                     const savedImp = parseInt((wardData[currentWard] && wardData[currentWard][id + '_imp']) || findVal(t, 'impact') || "1") || 1;
                     const savedProb = parseInt((wardData[currentWard] && wardData[currentWard][id + '_prob']) || findVal(t, 'prob') || "1") || 1;
@@ -643,7 +627,10 @@
             
             else {
                 body.innerHTML = navButtons + pdfHeader;
-                const tasks = (type === 'enablers' ? db.enablers : db.moves).filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                // DYNAMIC MERGE
+                let baseTasks = (type === 'enablers' ? db.enablers : db.moves).filter(t => { const w = findVal(t, 'ward') || findVal(t, 'departmentalname'); return w === currentWard || !w; });
+                let customTasks = []; if (wardData['CUSTOM_ITEMS']) { Object.values(wardData['CUSTOM_ITEMS']).forEach(ci => { if (ci && ci.type === type && ci.ward === currentWard && ci.task) customTasks.push(ci.task); }); }
+                let tasks = [...baseTasks, ...customTasks];
                 
                 let compTasks = 0; let inProgTasks = 0; let lateTasks = 0;
                 let mappedTasks = tasks.map(t => {
@@ -697,7 +684,6 @@
             html2pdf().set(opt).from(element).save().then(() => { document.querySelectorAll('.no-print').forEach(el => el.style.display = 'flex'); swapList.forEach(item => { item.replacement.remove(); item.area.style.display = ''; }); });
         }
 
-        // --- NEW TASK ENGINE ---
         function openModal() { 
             document.getElementById('taskModal').style.display = 'flex'; 
             ['standardDescField', 'taskFields', 'progFields', 'riskFields', 'changeFields', 'equipFields', 'dirFields'].forEach(id => document.getElementById(id).style.display = 'none');
@@ -711,7 +697,6 @@
         function closeModal() { document.getElementById('taskModal').style.display = 'none'; }
         
         function saveNewTask() {
-            // DIRECTORY
             if (currentType === 'directory') {
                 const name = document.getElementById('mDirName').value; const email = document.getElementById('mDirEmail').value; const role = document.getElementById('mDirRole').value;
                 if (!name) return alert("Enter a name"); if (!wardData['GLOBAL_DIR']) wardData['GLOBAL_DIR'] = {};
@@ -721,8 +706,6 @@
             }
 
             const desc = document.getElementById('mDesc').value; if (!desc) return alert("Enter description");
-            
-            // Blanket failsafe to prevent crashes across all modules
             if (!wardData[currentWard]) wardData[currentWard] = {}; 
 
             let prefix = currentType === 'changes' ? "CHG-" : currentType === 'equipment' ? "EQ-" : currentType === 'risks' ? "RSK-" : "NEW-"; 
@@ -752,15 +735,9 @@
             if (!wardData['CUSTOM_ITEMS']) wardData['CUSTOM_ITEMS'] = {};
             wardData['CUSTOM_ITEMS']["CI_" + Date.now()] = { type: currentType, ward: currentWard, task: newTask };
             
-            // INSTANT UI UPDATE
-            if (currentType === 'risks') db.risks.push(newTask);
-            else if (currentType === 'programme') db.programme.push(newTask);
-            else if (currentType === 'changes') db.changes.push(newTask);
-            else if (currentType === 'enablers') db.enablers.push(newTask);
-            else if (currentType === 'moves') db.moves.push(newTask);
+            // REMOVED INSTANT DB.PUSH MUTATION - ALL DATA IS NOW MERGED DYNAMICALLY AT RENDER
 
             saveToCloud();
-
             document.getElementById('mDesc').value = ''; closeModal(); showModule(currentType);
         }
 
