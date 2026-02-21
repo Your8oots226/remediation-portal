@@ -16,9 +16,10 @@
         .card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .btn { padding: 8px 16px; border: none; border-radius: 4px; color: white; cursor: pointer; font-weight: bold; } .btn:hover { opacity: 0.9; }
         .lib-row { display: grid; gap: 10px; align-items: start; padding: 6px 0; border-bottom: 1px solid #eee; }
+        .lib-row input, .lib-row select, .lib-row textarea { width: 100%; box-sizing: border-box; }
         .row-header { display: grid; gap: 10px; padding: 6px; font-weight: bold; background: #f1f5f9; border-radius: 4px; margin-bottom: 5px; }
         textarea.comment-input { font-family: inherit; }
-        @media print { body { background: white; } .no-print { display: none !important; } .card { box-shadow: none; border: 1px solid #ddd; } }
+        @media print { body { background: white; } .no-print { display: none !important; } .card { box-shadow: none; border: 1px solid #ddd; } .action-btns { display: none !important; } }
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1e293b; z-index: 9999; display: flex; justify-content: center; align-items: center; }
         #app-container { display: none; }
         .action-btns { display: flex; gap: 5px; justify-content: center; } .action-btns button { cursor: pointer; background: none; border: none; font-size: 1rem; opacity: 0.6; } .action-btns button:hover { opacity: 1; }
@@ -56,17 +57,17 @@
         <div id="view-new-project" class="view">
             <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; border:1px solid #e2e8f0;">
                 <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Create New Project</h2>
-                <label style="display:block; margin-top:15px; font-weight:bold;">Project Name</label><input type="text" id="npName" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;">
+                <label style="display:block; margin-top:15px; font-weight:bold;">Project Name</label><input type="text" id="npName" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;">
                 <div style="display:flex; gap:15px; margin-top:20px;">
-                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Budget (£)</label><input type="number" id="npBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Programme</label><input type="text" id="npProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Budget (£)</label><input type="number" id="npBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Programme</label><input type="text" id="npProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <h3 style="margin-top:30px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">Key Milestones</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="switchView('view-home');" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveNewProject()" style="background:#10b981;">Create Project</button></div>
             </div>
@@ -75,17 +76,17 @@
         <div id="view-edit-project" class="view">
             <div style="max-width:600px; margin:40px auto; background:white; padding:30px; border-radius:12px; border:1px solid #e2e8f0;">
                 <h2 style="margin-top:0; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">Update Project Information</h2>
-                <label style="display:block; margin-top:15px; font-weight:bold;">Project Name</label><input type="text" id="epName" disabled style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; background:#f1f5f9;">
+                <label style="display:block; margin-top:15px; font-weight:bold;">Project Name</label><input type="text" id="epName" disabled style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; background:#f1f5f9; box-sizing:border-box;">
                 <div style="display:flex; gap:15px; margin-top:20px;">
-                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Budget (£)</label><input type="number" id="epBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Programme</label><input type="text" id="epProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Budget (£)</label><input type="number" id="epBudget" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div style="flex:1;"><label style="display:block; font-weight:bold;">Baseline Programme</label><input type="text" id="epProg" style="width:100%; padding:10px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <h3 style="margin-top:30px; border-bottom:1px solid #e2e8f0; padding-bottom:5px;">Key Milestones</h3>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="epMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="epMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="epMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="epMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="epMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="epMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="epMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="epMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="switchView('view-menu')" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveProjectInfo()" style="background:#f59e0b;">Save Updates</button></div>
             </div>
@@ -133,51 +134,51 @@
             
             <div id="scopeFields" style="display:none;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Category</label>
-                <input type="text" id="mScopeCat" list="dl-cat" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;" placeholder="Select or type new...">
+                <input type="text" id="mScopeCat" list="dl-cat" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="Select or type new...">
             </div>
 
-            <div id="standardDescField"><label style="display:block; margin-top:10px; font-weight:bold;">Description / Title</label><input type="text" id="mDesc" list="dl-desc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></div>
+            <div id="standardDescField"><label style="display:block; margin-top:10px; font-weight:bold;">Description / Title</label><input type="text" id="mDesc" list="dl-desc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div>
             
             <div id="taskFields" style="display:none;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label><select id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></select>
-                <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label><input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label><select id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
+                <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label><input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
-                <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Complete">Complete</option><option value="Late">Late</option></select>
+                <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Complete">Complete</option><option value="Late">Late</option></select>
             </div>
 
             <div id="progFields" style="display:none;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Lead</label><select id="mLead" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></select>
-                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Start Date</label><input type="date" id="mStart" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Duration (Days)</label><input type="number" id="mDur" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;" placeholder="e.g. 5"></div></div>
+                <label style="display:block; margin-top:10px; font-weight:bold;">Lead</label><select id="mLead" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
+                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Start Date</label><input type="date" id="mStart" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Duration (Days)</label><input type="number" id="mDur" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="e.g. 5"></div></div>
             </div>
 
             <div id="riskFields" style="display:none;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Risk Type</label>
-                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px; border:1px solid #ccc; padding:10px; border-radius:4px; background:#f8fafc;">
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px; border:1px solid #ccc; padding:10px; border-radius:4px; background:#f8fafc; box-sizing:border-box;">
                     <label><input type="checkbox" value="Programme" class="risk-type-cb"> Programme</label><label><input type="checkbox" value="Cost" class="risk-type-cb"> Cost</label><label><input type="checkbox" value="Disruption" class="risk-type-cb"> Disruption</label><label><input type="checkbox" value="H&S" class="risk-type-cb"> H&S</label><label><input type="checkbox" value="Compliance" class="risk-type-cb"> Compliance</label>
                 </div>
-                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Impact (1-5)</label><select id="mImp" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Prob (1-5)</label><select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div></div>
+                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Impact (1-5)</label><select id="mImp" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Prob (1-5)</label><select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div></div>
             </div>
 
             <div id="changeFields" style="display:none;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Requestor</label>
-                <input type="text" id="mChangeReq" list="dl-dir" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;" placeholder="Select or type new...">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Date Requested</label><input type="date" id="mChangeDate" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Cost Impact (£)</label><input type="number" id="mChangeCost" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Time Impact (Days)</label><input type="number" id="mChangeTime" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"></div></div>
-                <label style="display:block; margin-top:10px; font-weight:bold;">Funding Source</label><input type="text" id="mChangeFund" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Status</label><select id="mChangeStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="Pending">Pending</option><option value="Instructed">Instructed</option><option value="Refused">Refused</option><option value="Cancelled">Cancelled</option></select>
+                <input type="text" id="mChangeReq" list="dl-dir" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="Select or type new...">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Date Requested</label><input type="date" id="mChangeDate" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Cost Impact (£)</label><input type="number" id="mChangeCost" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Time Impact (Days)</label><input type="number" id="mChangeTime" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div></div>
+                <label style="display:block; margin-top:10px; font-weight:bold;">Funding Source</label><input type="text" id="mChangeFund" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Status</label><select id="mChangeStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="Pending">Pending</option><option value="Instructed">Instructed</option><option value="Refused">Refused</option><option value="Cancelled">Cancelled</option></select>
             </div>
 
             <div id="equipFields" style="display:none;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Room Name / Number</label><input type="text" id="mEquipRoom" list="dl-room" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Group No</label><select id="mEquipGroup" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;"><option value="1">Group 1</option><option value="2">Group 2</option><option value="3">Group 3</option></select>
+                <label style="display:block; margin-top:10px; font-weight:bold;">Room Name / Number</label><input type="text" id="mEquipRoom" list="dl-room" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Group No</label><select id="mEquipGroup" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="1">Group 1</option><option value="2">Group 2</option><option value="3">Group 3</option></select>
                 <label style="display:block; margin-top:10px; font-weight:bold;">Storage Location / Action</label>
-                <input type="text" id="mEquipLoc" list="dl-loc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;" placeholder="e.g. Store Room 1, or Dispose">
+                <input type="text" id="mEquipLoc" list="dl-loc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="e.g. Store Room 1, or Dispose">
             </div>
 
             <div id="dirFields" style="display:none;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Name</label><input type="text" id="mDirName" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Email</label><input type="email" id="mDirEmail" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Role / Company</label><input type="text" id="mDirRole" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Name</label><input type="text" id="mDirName" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Email</label><input type="email" id="mDirEmail" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                <label style="display:block; margin-top:10px; font-weight:bold;">Role / Company</label><input type="text" id="mDirRole" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
             </div>
 
             <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="closeModal()" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveNewTask()" style="background:#10b981;">Save</button></div>
@@ -253,7 +254,19 @@
         function calcEndObj(s, d) { if(!s||!d)return null; let dt=new Date(s); let dy=parseInt(d); if(isNaN(dy)||dy<=0)return null; if(dt.getDay()===0)dt.setDate(dt.getDate()+1); if(dt.getDay()===6)dt.setDate(dt.getDate()+2); dy-=1; while(dy>0){ dt.setDate(dt.getDate()+1); if(dt.getDay()!==0&&dt.getDay()!==6)dy--; } return dt; }
         function formatDateGB(d) { if(!d)return ""; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
 
-        function getCustomTasks(type) { let t=[]; if(wardData['CUSTOM_ITEMS']) Object.values(wardData['CUSTOM_ITEMS']).forEach(c=>{if(c&&c.type===type&&c.ward===currentWard&&c.task)t.push(c.task);}); return t; }
+        function getCustomTasks(type) { 
+            let t=[]; 
+            if(wardData['CUSTOM_ITEMS']) {
+                Object.values(wardData['CUSTOM_ITEMS']).forEach(c=>{
+                    if(c && c.type===type && c.ward===currentWard && c.task) {
+                        let obj = {...c.task, _ciKey: c._ciKey};
+                        if(c.category) obj.category = c.category;
+                        t.push(obj);
+                    }
+                });
+            }
+            return t; 
+        }
         
         function deleteItem(k, isBase) { 
             if(confirm("Delete this item?")) { 
@@ -308,7 +321,7 @@
                         const sk = sanitizeKey(i.d); const s = wardData[currentWard][sk]||"";
                         let bL = s.trim()!=="" ? "border-left:3px solid #10b981;" : "border-left:3px solid transparent;";
                         let dBtn = i.k ? `<button onclick="deleteItem('${i.k}', false)" style="background:none;border:none;cursor:pointer;opacity:0.6;">🗑️</button>` : '';
-                        return `<div class="lib-row" style="display:flex;gap:15px;padding:8px;${bL}"><div style="width:40%;font-size:0.85rem;font-weight:600;">${i.d} ${dBtn}</div><textarea class="comment-input" style="width:60%;min-height:45px;height:auto;resize:none;font-size:0.8rem;padding:6px;border:1px solid #ccc;border-radius:4px;" oninput="autoResize(this);saveComment('${sk}',this.value);this.parentElement.style.borderLeft=this.value.trim()!==''?'3px solid #10b981':'3px solid transparent';">${s}</textarea></div>`;
+                        return `<div class="lib-row" style="display:flex;gap:15px;padding:8px;${bL}"><div style="width:40%;font-size:0.85rem;font-weight:600;">${i.d} ${dBtn}</div><textarea class="comment-input" style="width:60%;min-height:45px;height:auto;resize:none;font-size:0.8rem;padding:6px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" oninput="autoResize(this);saveComment('${sk}',this.value);this.parentElement.style.borderLeft=this.value.trim()!==''?'3px solid #10b981':'3px solid transparent';">${s}</textarea></div>`;
                     }).join('');
                     body.innerHTML += `<div style="margin-bottom:15px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;"><div onclick="const n=this.nextElementSibling;n.style.display=n.style.display==='none'?'block':'none'" style="background:#f8fafc;padding:10px;font-weight:bold;cursor:pointer;border-bottom:1px solid #e2e8f0;">📂 ${cat}</div><div style="display:${scopeFilterActive?'block':'none'};">${rows}</div></div>`;
                 });
@@ -430,19 +443,39 @@
             }
 
             else if(type==='reports') {
-                let cts=[...db.changes.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'no')||findVal(t,'id'),c:findVal(t,'cost£')||findVal(t,'cost'),ti:findVal(t,'timeimpact')||findVal(t,'time'),s:findVal(t,'status')}))];
-                getCustomTasks('changes').forEach(c=>cts.push({id:c.no,c:c.cost,ti:c.time,s:c.status}));
+                let cts=[...db.changes.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'no')||findVal(t,'id'),d:findVal(t,'description'),dt:findVal(t,'date'),c:findVal(t,'cost£')||findVal(t,'cost'),ti:findVal(t,'timeimpact')||findVal(t,'time'),s:findVal(t,'status')}))];
+                getCustomTasks('changes').forEach(c=>cts.push({id:c.no,d:c.description,dt:c.date,c:c.cost,ti:c.time,s:c.status}));
                 let tC=0, tT=0; cts.forEach(t=>{ const id=sanitizeKey(t.id); const st=wardData[currentWard][id+'_status']||t.s||"Pending"; if(!hiddenBase.includes(t.id) && (st==='Instructed'||st==='Pending')){ tC+=parseFloat(wardData[currentWard][id+'_cost']||t.c)||0; tT+=parseFloat(wardData[currentWard][id+'_time']||t.ti)||0; }});
                 const bB = parseFloat(wardData[currentWard]['baseline_budget'])||0;
 
                 body.innerHTML += `<div style="display:flex;gap:15px;margin-bottom:20px;"><div style="flex:1;background:#f8fafc;padding:15px;border:1px solid #ccc;"><div style="font-weight:bold;margin-bottom:5px;">Baseline Budget: £${bB.toLocaleString()}</div><div>Approved Budget: <span style="color:${tC>0?'red':'green'}">£${(bB+tC).toLocaleString()}</span></div></div><div style="flex:1;background:#f8fafc;padding:15px;border:1px solid #ccc;"><div style="font-weight:bold;margin-bottom:5px;">Time Variance: <span style="color:${tT>0?'red':'green'}">+${tT} Days</span></div></div></div>`;
 
-                let eTs = [...db.enablers, ...db.moves].filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:(findVal(t,'taskid')||findVal(t,'id')), d:findVal(t,'taskdescription'), s:findVal(t,'currentstatus')}));
-                getCustomTasks('enablers').concat(getCustomTasks('moves')).forEach(c=>eTs.push({id:c.taskid, d:c.taskdescription, s:c.currentstatus}));
-                let lateE = eTs.filter(t=>!hiddenBase.includes(t.id)).map(t=>{ const id=sanitizeKey('EN-'+t.id); return {d:t.d, s:wardData[currentWard][id+'_status']||t.s}; }).filter(t=>t.s==='Late');
-                if(lateE.length>0) {
-                    body.innerHTML += `<h3>Late Enablers & Moves</h3><div style="margin-bottom:20px;border:1px solid #fca5a5;padding:10px;background:#fee2e2;">${lateE.map(t=>`<div>• ${t.d}</div>`).join('')}</div>`;
+                body.innerHTML += `<div style="margin-bottom:20px;"><h3>Progress Update</h3><textarea style="width:100%;min-height:80px;resize:vertical;padding:10px;border:1px solid #ccc;border-radius:4px;box-sizing:border-box;" oninput="saveComment('report_progress',this.value)">${wardData[currentWard]['report_progress']||""}</textarea></div>`;
+
+                let pTs = [...db.programme.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'activityid')||findVal(t,'id'), d:findVal(t,'activity')||findVal(t,'milestone'), st:findVal(t,'startdate'), du:findVal(t,'duration'), s:findVal(t,'status')}))];
+                getCustomTasks('programme').forEach(c => pTs.push({id:c.activityid, d:c.activity, st:c.startdate, du:c.duration, s:c.status}));
+                let pMs = pTs.map(t => { const id = sanitizeKey(t.id); const st=wardData[currentWard][id+'_start']||t.st||""; const dur=wardData[currentWard][id+'_dur']||t.du||""; return { d:t.d, sStat:wardData[currentWard][id+'_status']||t.s||"Not Started", sObj:st?new Date(st):null, eObj:calcEndObj(st,dur) }; }).filter(t=>t.sObj&&t.eObj);
+                if(pMs.length>0) {
+                    const minD = new Date(Math.min(...pMs.map(t=>t.sObj).filter(x=>x))); const maxD = new Date(Math.max(...pMs.map(t=>t.eObj).filter(x=>x))); const span = (maxD-minD)||(1000*60*60*24);
+                    let mAxis = `<div style="position:relative;height:15px;border-bottom:1px solid #cbd5e1;margin-bottom:8px;font-size:0.65rem;color:#64748b;">`;
+                    for(let m=new Date(minD.getFullYear(),minD.getMonth(),1); m<=maxD; m.setMonth(m.getMonth()+1)) { let pct=((m-minD)/span)*100; if(pct>=0&&pct<=100) mAxis+=`<div style="position:absolute;left:${pct}%;">${m.toLocaleString('default',{month:'short'})}</div>`; } mAxis+=`</div>`;
+                    let bars = pMs.map(t=>{ if(!t.sObj)return''; let l=((t.sObj-minD)/span)*100; let w=((t.eObj-t.sObj)/span)*100; if(w<1)w=1; if(l+w>100)w=100-l; let c=t.sStat==='Complete'?'#10b981':t.sStat==='Late'?'#ef4444':t.sStat==='In Progress'?'#3b82f6':'#94a3b8'; return `<div style="display:flex;margin-bottom:6px;font-size:0.7rem;"><div style="width:25%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.d}</div><div style="width:75%;position:relative;background:#f1f5f9;"><div style="position:absolute;left:${l}%;width:${w}%;background:${c};height:100%;"></div></div></div>`; }).join('');
+                    body.innerHTML += `<h3>Programme Snapshot</h3><div style="margin-bottom:20px;padding:15px;border:1px solid #cbd5e1;border-radius:6px;"><div style="display:flex;"><div style="width:25%;"></div><div style="width:75%;">${mAxis}</div></div>${bars}</div>`;
                 }
+
+                let eTs = [...db.enablers, ...db.moves].filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:(findVal(t,'taskid')||findVal(t,'id')), d:findVal(t,'taskdescription'), du:findVal(t,'datedue'), s:findVal(t,'currentstatus')}));
+                getCustomTasks('enablers').concat(getCustomTasks('moves')).forEach(c=>eTs.push({id:c.taskid, d:c.taskdescription, du:c.datedue, s:c.currentstatus}));
+                let lateE = eTs.filter(t=>!hiddenBase.includes(t.id)).map(t=>{ const id=sanitizeKey('EN-'+t.id); let dueStr=wardData[currentWard][id+'_due']||t.du; let isOverdue = dueStr && new Date(dueStr) < new Date(); let stat = wardData[currentWard][id+'_status']||t.s; return {d:t.d, s:stat, isOverdue}; }).filter(t=>t.s==='Late' || (t.isOverdue && t.s!=='Complete'));
+                if(lateE.length>0) body.innerHTML += `<h3>Late / Overdue Tasks</h3><div style="margin-bottom:20px;border:1px solid #fca5a5;padding:10px;background:#fee2e2;">${lateE.map(t=>`<div>• ${t.d}</div>`).join('')}</div>`;
+
+                let rTs = [...db.risks.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'riskid')||findVal(t,'id'), d:findVal(t,'riskdescription')||findVal(t,'risk'), imp:findVal(t,'impact'), pr:findVal(t,'prob')}))];
+                getCustomTasks('risks').forEach(c => rTs.push({id:c.riskid, d:c.riskdescription, imp:c.impact, pr:c.prob}));
+                let highRisks = rTs.filter(t=>!hiddenBase.includes(t.id)).map(t=>{ const id=sanitizeKey(t.id); const i=parseInt(wardData[currentWard][id+'_imp']||t.imp||"1")||1; const p=parseInt(wardData[currentWard][id+'_prob']||t.pr||"1")||1; return {d:t.d, sc:i*p}; }).filter(t=>t.sc>=12).sort((a,b)=>b.sc-a.sc);
+                if(highRisks.length>0) body.innerHTML += `<h3>High Risks (Score 12+)</h3><div style="margin-bottom:20px;border:1px solid #fca5a5;padding:10px;background:#fee2e2;">${highRisks.map(r=>`<div>• [Score: ${r.sc}] ${r.d}</div>`).join('')}</div>`;
+
+                let thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30);
+                let recentChanges = cts.filter(t=>!hiddenBase.includes(t.id)).map(t=>{ const id=sanitizeKey(t.id); const dtStr=wardData[currentWard][id+'_date']||t.dt||""; const d=dtStr?new Date(dtStr):null; return {d:t.d, st:wardData[currentWard][id+'_status']||t.s||"Pending", dateObj:d}; }).filter(t=>t.dateObj && t.dateObj >= thirtyDaysAgo);
+                if(recentChanges.length>0) body.innerHTML += `<h3>Recent Changes (Last 30 Days)</h3><div style="margin-bottom:20px;border:1px solid #fde68a;padding:10px;background:#fffbeb;">${recentChanges.map(c=>`<div>• [${c.st}] ${c.d}</div>`).join('')}</div>`;
             }
             setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100); switchView('view-content');
         }
@@ -510,7 +543,7 @@
             
             let extra = {};
             if(currentType==='brief') { t={taskdescription:desc}; extra={category:document.getElementById('mScopeCat').value||"Uncategorized"}; }
-            else if(currentType==='risks') { t={riskid:nid, riskdescription:desc, impact:document.getElementById('mImp').value||"1", prob:document.getElementById('mProb').value||"1"}; const st=Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb=>cb.value).join(', '); if(!editId){ wardData[currentWard][sanitizeKey(nid)+'_type']=st; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${sanitizeKey(nid)}_type`).set(st); } }
+            else if(currentType==='risks') { const st=Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb=>cb.value).join(', '); t={riskid:nid, riskdescription:desc, impact:document.getElementById('mImp').value||"1", prob:document.getElementById('mProb').value||"1", type: st}; if(!editId){ wardData[currentWard][sanitizeKey(nid)+'_type']=st; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${sanitizeKey(nid)}_type`).set(st); } }
             else if(currentType==='programme') { t={activityid:nid, activity:desc, lead:document.getElementById('mLead').value, startdate:document.getElementById('mStart').value, duration:document.getElementById('mDur').value}; }
             else if(currentType==='changes') { t={no:nid, description:desc, requestor:document.getElementById('mChangeReq').value, date:document.getElementById('mChangeDate').value, cost:document.getElementById('mChangeCost').value, time:document.getElementById('mChangeTime').value, fundingsource:document.getElementById('mChangeFund').value, status:document.getElementById('mChangeStatus').value}; }
             else if(currentType==='equipment') {
@@ -536,7 +569,22 @@
         function findVal(o,k){if(!o)return"";const x=Object.keys(o).find(x=>x.toLowerCase().replace(/\s/g,'')===k.toLowerCase().replace(/\s/g,''));return x?o[x]:"";}
         function downloadData(){const d='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(wardData));const a=document.createElement('a');a.href=d;a.download=`Backup_${new Date().toISOString().slice(0,10)}.json`;a.click();}
         function uploadData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{wardData=JSON.parse(ev.target.result);saveToCloud();alert("Restored!");location.reload();}catch(er){alert("Error.");}};r.readAsText(f);}
-        function downloadPDF() { document.querySelectorAll('.no-print').forEach(e=>e.style.display='none'); let sl=[]; document.querySelectorAll('textarea, input:not([type="hidden"]), select').forEach(e=>{ if(e.closest('#taskModal'))return; const d=document.createElement('div'); d.innerText=(e.tagName==='SELECT'&&e.selectedIndex>=0)?e.options[e.selectedIndex].text:e.value||""; d.style.cssText=`width:100%;font-size:${getComputedStyle(e).fontSize};padding:4px;font-family:sans-serif;box-sizing:border-box;white-space:pre-wrap;`; e.style.display='none'; e.parentNode.insertBefore(d,e); sl.push({a:e,r:d}); }); html2pdf().set({margin:0.4,filename:`${currentWard}_Export.pdf`,jsPDF:{unit:'in',format:'a4',orientation:(currentType==='brief'||currentType==='reports')?'portrait':'landscape'}}).from(document.getElementById('moduleBody')).save().then(()=>{ document.querySelectorAll('.no-print').forEach(e=>e.style.display='flex'); sl.forEach(i=>{i.r.remove();i.a.style.display='';}); }); }
+        function downloadPDF() { 
+            document.querySelectorAll('.no-print').forEach(e=>e.style.display='none'); 
+            let sl=[]; 
+            document.querySelectorAll('textarea, input:not([type="hidden"]), select').forEach(e=>{ 
+                if(e.closest('#taskModal') || e.closest('.action-btns')) return; 
+                const d=document.createElement('div'); 
+                d.innerText=(e.tagName==='SELECT'&&e.selectedIndex>=0)?e.options[e.selectedIndex].text:e.value||""; 
+                d.style.cssText=`width:100%;font-size:${getComputedStyle(e).fontSize};padding:4px;font-family:sans-serif;box-sizing:border-box;white-space:pre-wrap;`; 
+                e.style.display='none'; e.parentNode.insertBefore(d,e); sl.push({a:e,r:d}); 
+            }); 
+            const modNames = {brief:'Scope', enablers:'Enablers', moves:'Moves', programme:'Programme', risks:'Risks', changes:'Changes', equipment:'Equipment', directory:'Directory', reports:'Report'};
+            html2pdf().set({margin:0.4,filename:`${currentWard}_${modNames[currentType]||'Export'}.pdf`,jsPDF:{unit:'in',format:'a4',orientation:(currentType==='brief'||currentType==='reports')?'portrait':'landscape'}}).from(document.getElementById('moduleBody')).save().then(()=>{ 
+                document.querySelectorAll('.no-print').forEach(e=>e.style.display=''); 
+                sl.forEach(i=>{i.r.remove();i.a.style.display='';}); 
+            }); 
+        }
     </script>
 </body>
 </html>
