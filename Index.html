@@ -215,8 +215,6 @@
         }
 
         function saveToCloud() { if(auth.currentUser) { try{ database.ref('pmoData').set(JSON.parse(JSON.stringify(wardData))); } catch(e){} } }
-        
-        // ** SANITIZER FIX FOR SYNC BUG **
         function sanitizeKey(str) { return String(str).replace(/[\.\#\$\/\[\]]/g, '_'); }
 
         function handleFile(e) {
@@ -256,12 +254,27 @@
         function formatDateGB(d) { if(!d)return ""; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
 
         function getCustomTasks(type) { let t=[]; if(wardData['CUSTOM_ITEMS']) Object.values(wardData['CUSTOM_ITEMS']).forEach(c=>{if(c&&c.type===type&&c.ward===currentWard&&c.task)t.push(c.task);}); return t; }
-        function deleteItem(ciKey) { if(confirm("Delete this item?")){ if(wardData['CUSTOM_ITEMS'] && wardData['CUSTOM_ITEMS'][ciKey]) { delete wardData['CUSTOM_ITEMS'][ciKey]; if(auth.currentUser) database.ref(`pmoData/CUSTOM_ITEMS/${ciKey}`).remove(); showModule(currentType); } else if(wardData['GLOBAL_DIR'] && wardData['GLOBAL_DIR'][ciKey]) { delete wardData['GLOBAL_DIR'][ciKey]; if(auth.currentUser) database.ref(`pmoData/GLOBAL_DIR/${ciKey}`).remove(); showModule(currentType); } else { alert("Cannot delete standard Excel items."); } } }
+        
+        function deleteItem(k, isBase) { 
+            if(confirm("Delete this item?")) { 
+                if(isBase) {
+                    if(!wardData[currentWard]['_hidden']) wardData[currentWard]['_hidden']=[]; 
+                    wardData[currentWard]['_hidden'].push(k); 
+                    if(auth.currentUser) database.ref(`pmoData/${currentWard}/_hidden`).set(wardData[currentWard]['_hidden']);
+                } else {
+                    if(wardData['CUSTOM_ITEMS'] && wardData['CUSTOM_ITEMS'][k]) { delete wardData['CUSTOM_ITEMS'][k]; if(auth.currentUser) database.ref(`pmoData/CUSTOM_ITEMS/${k}`).remove(); } 
+                    else if(wardData['GLOBAL_DIR'] && wardData['GLOBAL_DIR'][k]) { delete wardData['GLOBAL_DIR'][k]; if(auth.currentUser) database.ref(`pmoData/GLOBAL_DIR/${k}`).remove(); }
+                }
+                showModule(currentType); 
+            } 
+        }
 
         function showModule(type) {
             currentType = type; const body = document.getElementById('moduleBody'); body.innerHTML = "";
             let head = currentWard, sub = "";
             if(type==='brief') sub="Scope Builder"; else if(type==='enablers') {head+=" Enablers"; sub="Tasks";} else if(type==='moves') {head+=" Ward Move"; sub="Plan";} else if(type==='programme') {head+=" Programme"; sub="Milestones";} else if(type==='risks') {head+=" Risk Register"; sub="Risks";} else if(type==='changes') {head+=" Change Control"; sub="Variations";} else if(type==='equipment') {head+=" Equipment Audit"; sub="Assets";} else if(type==='directory') {head="Project Directory"; sub="Stakeholders";} else if(type==='reports') {head+=" Monthly Report"; sub="Overview";}
+
+            let hiddenBase = (wardData[currentWard] && wardData[currentWard]['_hidden']) || [];
 
             let filter = "";
             if(type==='brief') filter = `<button class="btn" style="background:#8b5cf6;" onclick="scopeFilterActive=!scopeFilterActive;showModule('brief')">${scopeFilterActive?'👁 Show All':'👁 Hide Unused'}</button>`;
@@ -269,11 +282,17 @@
             else if(type==='risks') filter = `<select class="btn" style="background:#8b5cf6;color:white;" onchange="riskFilterLevel=parseInt(this.value);showModule('risks')"><option value="0" ${riskFilterLevel===0?'selected':''}>Show All</option><option value="8" ${riskFilterLevel===8?'selected':''}>Med/High (8+)</option><option value="12" ${riskFilterLevel===12?'selected':''}>Score 12+</option></select>`;
             else if(type==='equipment') {
                 const rs = [...new Set([...db.equipLibrary.map(t=>findVal(t,'room')||findVal(t,'roomname')), ...(wardData[currentWard]['_customRooms']||[]), ...(wardData[currentWard]['equipmentLog']?Object.values(wardData[currentWard]['equipmentLog']).map(e=>e.room):[])])].filter(Boolean).sort();
-                filter = `<select class="btn" style="background:#8b5cf6;color:white;" onchange="equipCurrentRoom=this.value;showModule('equipment')"><option value="All" ${equipCurrentRoom==='All'?'selected':''}>All Rooms</option>${rs.map(r=>`<option value="${r}" ${equipCurrentRoom===r?'selected':''}>${r}</option>`).join('')}</select> <select class="btn" style="background:#f59e0b;color:white;" onchange="equipSortBy=this.value;showModule('equipment')"><option value="room" ${equipSortBy==='room'?'selected':''}>Sort: Room</option><option value="desc" ${equipSortBy==='desc'?'selected':''}>Sort: Desc</option><option value="consol" ${equipSortBy==='consol'?'selected':''}>Consolidate</option></select> <button class="btn" style="background:#3b82f6;" onclick="promptNewRoom()">+ Add Room</button>`;
+                filter = `<select class="btn" style="background:#8b5cf6;color:white;" onchange="equipCurrentRoom=this.value;showModule('equipment')"><option value="All" ${equipCurrentRoom==='All'?'selected':''}>All Rooms</option>${rs.map(r=>`<option value="${r}" ${equipCurrentRoom===r?'selected':''}>${r}</option>`).join('')}</select> <select class="btn" style="background:#f59e0b;color:white;" onchange="equipSortBy=this.value;showModule('equipment')"><option value="room" ${equipSortBy==='room'?'selected':''}>Sort: Room</option><option value="desc" ${equipSortBy==='desc'?'selected':''}>Sort: Desc</option><option value="consol" ${equipSortBy==='consol'?'selected':''}>Consolidate</option></select>`;
             }
 
-            const noAdd = type==='reports';
-            body.innerHTML = `<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px;border-bottom:1px solid #ddd;padding-bottom:15px;"><button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back</button><button class="btn" style="background:#ef4444;" onclick="downloadPDF()">PDF</button>${noAdd?'':`<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add Item</button>`}${filter}</div><h2 style="border-bottom:2px solid #333;padding-bottom:5px;">${head} <span style="font-size:0.8rem;color:#666;">${sub}</span></h2>`;
+            const noAdd = type==='reports' || type==='equipment';
+            const reportDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            body.innerHTML = `<div class="no-print" style="margin-bottom:20px;display:flex;gap:10px;border-bottom:1px solid #ddd;padding-bottom:15px;"><button class="btn" style="background:#64748b;" onclick="switchView('view-menu')">← Back</button><button class="btn" style="background:#ef4444;" onclick="downloadPDF()">PDF</button>${noAdd?'':`<button class="btn" style="background:#10b981;" onclick="openModal()">+ Add Item</button>`}${filter}</div><div class="report-header" style="margin-bottom:15px; border-bottom:2px solid #333; padding-bottom:5px; display:flex; justify-content:space-between; align-items:end;"><div><h2 style="margin:0;">${head}</h2><span style="font-size:0.8rem;color:#666;">${sub}</span></div><div style="font-size:0.8rem;"><strong>Date:</strong> ${reportDate}</div></div>`;
+
+            if(type==='equipment') {
+                body.innerHTML += `<div class="no-print" style="margin-bottom:15px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; padding:12px; display:flex; gap:15px; align-items:center;"><span style="font-weight:bold; font-size:0.85rem; color:#334155;">Room Audit Actions:</span><button class="btn" style="background:#3b82f6;" onclick="promptNewRoom()">+ Add New Room</button><button class="btn" style="background:#10b981;" onclick="openModal()">+ Add Item to Current Room</button></div>`;
+            }
 
             if(type==='brief') {
                 const gc = i => findVal(i,'category')||findVal(i,'group')||findVal(i,'element');
@@ -288,8 +307,8 @@
                     let rows = catItems.map(i => {
                         const sk = sanitizeKey(i.d); const s = wardData[currentWard][sk]||"";
                         let bL = s.trim()!=="" ? "border-left:3px solid #10b981;" : "border-left:3px solid transparent;";
-                        let dBtn = i.k ? `<button onclick="deleteItem('${i.k}')" style="background:none;border:none;cursor:pointer;opacity:0.6;">🗑️</button>` : '';
-                        return `<div class="lib-row" style="display:flex;gap:15px;padding:8px;${bL}"><div style="width:40%;font-size:0.85rem;font-weight:600;">${i.d} ${dBtn}</div><textarea class="comment-input" style="width:60%;height:32px;resize:none;font-size:0.8rem;padding:6px;border:1px solid #ccc;border-radius:4px;" oninput="autoResize(this);saveComment('${sk}',this.value);this.parentElement.style.borderLeft=this.value.trim()!==''?'3px solid #10b981':'3px solid transparent';">${s}</textarea></div>`;
+                        let dBtn = i.k ? `<button onclick="deleteItem('${i.k}', false)" style="background:none;border:none;cursor:pointer;opacity:0.6;">🗑️</button>` : '';
+                        return `<div class="lib-row" style="display:flex;gap:15px;padding:8px;${bL}"><div style="width:40%;font-size:0.85rem;font-weight:600;">${i.d} ${dBtn}</div><textarea class="comment-input" style="width:60%;min-height:45px;height:auto;resize:none;font-size:0.8rem;padding:6px;border:1px solid #ccc;border-radius:4px;" oninput="autoResize(this);saveComment('${sk}',this.value);this.parentElement.style.borderLeft=this.value.trim()!==''?'3px solid #10b981':'3px solid transparent';">${s}</textarea></div>`;
                     }).join('');
                     body.innerHTML += `<div style="margin-bottom:15px;border:1px solid #e2e8f0;border-radius:6px;overflow:hidden;"><div onclick="const n=this.nextElementSibling;n.style.display=n.style.display==='none'?'block':'none'" style="background:#f8fafc;padding:10px;font-weight:bold;cursor:pointer;border-bottom:1px solid #e2e8f0;">📂 ${cat}</div><div style="display:${scopeFilterActive?'block':'none'};">${rows}</div></div>`;
                 });
@@ -298,7 +317,7 @@
             else if(type==='directory') {
                 let cons = [...db.directory.map(c=>({n:findVal(c,'name')||findVal(c,'contact'), e:findVal(c,'email'), r:findVal(c,'role'), k:null}))];
                 if(wardData['GLOBAL_DIR']) Object.keys(wardData['GLOBAL_DIR']).forEach(k => { let c=wardData['GLOBAL_DIR'][k]; if(c) cons.push({n:c.name, e:c.email, r:c.role, k:k}); });
-                let rows = cons.map(c => `<div class="lib-row" style="grid-template-columns:1fr 1fr 1fr 2fr 0.3fr;font-size:0.8rem;align-items:center;"><b>${c.n}</b><div>${c.e}</div><div>${c.r}</div><textarea style="height:28px;" oninput="saveDirComment('${sanitizeKey(c.n)}',this.value)">${(wardData['GLOBAL_DIR_NOTES']&&wardData['GLOBAL_DIR_NOTES'][sanitizeKey(c.n)])||""}</textarea><div class="action-btns">${c.k?`<button onclick="openEditModal('directory','${c.k}')">✏️</button><button onclick="deleteItem('${c.k}')">🗑️</button>`:''}</div></div>`).join('');
+                let rows = cons.map(c => `<div class="lib-row" style="grid-template-columns:1fr 1fr 1fr 2fr 0.3fr;font-size:0.8rem;align-items:center;"><b>${c.n}</b><div>${c.e}</div><div>${c.r}</div><textarea style="height:28px;" oninput="saveDirComment('${sanitizeKey(c.n)}',this.value)">${(wardData['GLOBAL_DIR_NOTES']&&wardData['GLOBAL_DIR_NOTES'][sanitizeKey(c.n)])||""}</textarea><div class="action-btns">${c.k?`<button onclick="openEditModal('directory','${c.k}',false)">✏️</button><button onclick="deleteItem('${c.k}',false)">🗑️</button>`:''}</div></div>`).join('');
                 body.innerHTML += `<div class="row-header" style="grid-template-columns:1fr 1fr 1fr 2fr 0.3fr;background:#333;color:white;"><div>Name</div><div>Email</div><div>Role</div><div>Notes</div><div></div></div>${rows}`;
             }
 
@@ -307,16 +326,17 @@
                 getCustomTasks(type).forEach(c => ts.push({id:c.taskid, d:c.taskdescription, w:c.whoresponsible, du:c.datedue, s:c.currentstatus, k:c._ciKey}));
                 
                 let ms = ts.map(t => {
-                    const id = sanitizeKey(t.id);
-                    return { id, origId: t.id, d: t.d, k: t.k, sWho: wardData[currentWard][id+'_who']||t.w||"", sDue: wardData[currentWard][id+'_due']||t.du||"", sStat: wardData[currentWard][id+'_status']||t.s||"Not Started", sNot: wardData[currentWard][id]||"" };
-                });
+                    const id = sanitizeKey(t.id); return { id, origId: t.id, d: t.d, k: t.k, sWho: wardData[currentWard][id+'_who']||t.w||"", sDue: wardData[currentWard][id+'_due']||t.du||"", sStat: wardData[currentWard][id+'_status']||t.s||"Not Started", sNot: wardData[currentWard][id]||"" };
+                }).filter(m => !hiddenBase.includes(m.origId));
 
                 if(enablerFilterActive) ms = ms.filter(m => !(m.sWho==="" && m.sDue==="" && m.sNot==="" && m.sStat==="Not Started"));
                 if(enablerSort) ms.sort((a,b) => new Date(a.sDue||'2099-01-01') - new Date(b.sDue||'2099-01-01'));
 
                 let rows = ms.map(t => {
                     let rc = t.sStat==='Complete'?"opacity:0.6;":(t.sDue&&t.sStat!=='Complete'&&(new Date(t.sDue)<new Date()))?"background:#fee2e2;":"";
-                    return `<div class="lib-row" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 1fr 1.5fr 0.4fr;${rc}"><div style="font-size:0.75rem;padding-top:8px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><select onchange="saveComment('${t.id}_who',this.value);showModule('${type}')" style="font-size:0.75rem;">${getDirOptions(t.sWho)}</select><input type="date" value="${t.sDue}" onchange="saveComment('${t.id}_due',this.value);showModule('${type}')" style="font-size:0.75rem;"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')" style="font-size:0.75rem;">${['Not Started','In Progress','Complete','Late'].map(o=>`<option ${t.sStat===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="height:32px;font-size:0.75rem;" oninput="saveComment('${t.id}',this.value)">${t.sNot}</textarea><div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}')">✏️</button><button onclick="deleteItem('${t.k}')">🗑️</button>`:''}</div></div>`;
+                    const bD = encodeURIComponent(JSON.stringify(t));
+                    const ab = `<div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}',false)">✏️</button><button onclick="deleteItem('${t.k}',false)">🗑️</button>`:`<button onclick="openEditModal('${type}','${t.origId}',true,'${bD}')">✏️</button><button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                    return `<div class="lib-row" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 1fr 1.5fr 0.4fr;${rc}"><div style="font-size:0.75rem;padding-top:8px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><select onchange="saveComment('${t.id}_who',this.value);showModule('${type}')" style="font-size:0.75rem;">${getDirOptions(t.sWho)}</select><input type="date" value="${t.sDue}" onchange="saveComment('${t.id}_due',this.value);showModule('${type}')" style="font-size:0.75rem;"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')" style="font-size:0.75rem;">${['Not Started','In Progress','Complete','Late'].map(o=>`<option ${t.sStat===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="height:32px;font-size:0.75rem;" oninput="saveComment('${t.id}',this.value)">${t.sNot}</textarea>${ab}</div>`;
                 }).join('');
                 body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 1fr 1.5fr 0.4fr;background:#333;color:white;"><div>ID</div><div>Task</div><div>Owner</div><div>Due</div><div>Status</div><div>Notes</div><div></div></div>${rows}`;
             }
@@ -328,19 +348,23 @@
                 let ms = ts.map(t => {
                     const id = sanitizeKey(t.id); const st=wardData[currentWard][id+'_start']||t.st||""; const dur=wardData[currentWard][id+'_dur']||t.du||"";
                     return { id, origId:t.id, d:t.d, k:t.k, sLead:wardData[currentWard][id+'_lead']||t.l||"", st, dur, sStat:wardData[currentWard][id+'_status']||t.s||"Not Started", sNot:wardData[currentWard][id]||t.n||"", sObj:st?new Date(st):null, eObj:calcEndObj(st,dur) };
-                }).filter(t=>t.sObj&&t.eObj);
+                }).filter(m => !hiddenBase.includes(m.origId));
 
                 if(ms.length>0) {
-                    const minD = new Date(Math.min(...ms.map(t=>t.sObj))); const maxD = new Date(Math.max(...ms.map(t=>t.eObj))); const span = (maxD-minD)||(1000*60*60*24);
+                    const minD = new Date(Math.min(...ms.map(t=>t.sObj).filter(x=>x))); const maxD = new Date(Math.max(...ms.map(t=>t.eObj).filter(x=>x))); const span = (maxD-minD)||(1000*60*60*24);
                     let mAxis = `<div style="position:relative;height:15px;border-bottom:1px solid #cbd5e1;margin-bottom:8px;font-size:0.65rem;color:#64748b;">`;
                     for(let m=new Date(minD.getFullYear(),minD.getMonth(),1); m<=maxD; m.setMonth(m.getMonth()+1)) { let pct=((m-minD)/span)*100; if(pct>=0&&pct<=100) mAxis+=`<div style="position:absolute;left:${pct}%;">${m.toLocaleString('default',{month:'short'})}</div>`; } mAxis+=`</div>`;
                     
-                    let bars = ms.map(t=>{ let l=((t.sObj-minD)/span)*100; let w=((t.eObj-t.sObj)/span)*100; if(w<1)w=1; if(l+w>100)w=100-l; let c=t.sStat==='Complete'?'#10b981':t.sStat==='Late'?'#ef4444':t.sStat==='In Progress'?'#3b82f6':'#94a3b8'; return `<div style="display:flex;margin-bottom:6px;font-size:0.7rem;"><div style="width:25%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.d}</div><div style="width:75%;position:relative;background:#f1f5f9;"><div style="position:absolute;left:${l}%;width:${w}%;background:${c};height:100%;"></div></div></div>`; }).join('');
+                    let bars = ms.map(t=>{ if(!t.sObj)return''; let l=((t.sObj-minD)/span)*100; let w=((t.eObj-t.sObj)/span)*100; if(w<1)w=1; if(l+w>100)w=100-l; let c=t.sStat==='Complete'?'#10b981':t.sStat==='Late'?'#ef4444':t.sStat==='In Progress'?'#3b82f6':'#94a3b8'; return `<div style="display:flex;margin-bottom:6px;font-size:0.7rem;"><div style="width:25%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.d}</div><div style="width:75%;position:relative;background:#f1f5f9;"><div style="position:absolute;left:${l}%;width:${w}%;background:${c};height:100%;"></div></div></div>`; }).join('');
                     body.innerHTML += `<div style="margin-bottom:20px;padding:15px;border:1px solid #cbd5e1;border-radius:6px;"><div style="display:flex;"><div style="width:25%;"></div><div style="width:75%;">${mAxis}</div></div>${bars}</div>`;
                 }
 
-                let rows = ms.map(t => `<div class="lib-row" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr 0.4fr;"><div style="font-size:0.75rem;padding-top:6px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><select onchange="saveComment('${t.id}_lead',this.value);showModule('${type}')" style="font-size:0.7rem;">${getDirOptions(t.sLead)}</select><input type="date" value="${t.st}" onchange="saveComment('${t.id}_start',this.value);showModule('${type}')" style="font-size:0.7rem;"><input type="number" value="${t.dur}" onchange="saveComment('${t.id}_dur',this.value);showModule('${type}')" style="font-size:0.7rem;"><div style="font-size:0.7rem;padding-top:6px;">${formatDateGB(t.eObj)}</div><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')" style="font-size:0.7rem;">${['Not Started','In Progress','Complete','Late'].map(o=>`<option ${t.sStat===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="height:28px;font-size:0.7rem;" oninput="saveComment('${t.id}',this.value)">${t.sNot}</textarea><div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}')">✏️</button><button onclick="deleteItem('${t.k}')">🗑️</button>`:''}</div></div>`).join('');
-                body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 0.6fr 0.8fr 0.8fr 1.5fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End</div><div>Status</div><div>Notes</div><div></div></div>${rows}`;
+                let rows = ms.map(t => {
+                    const bD = encodeURIComponent(JSON.stringify(t));
+                    const ab = `<div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}',false)">✏️</button><button onclick="deleteItem('${t.k}',false)">🗑️</button>`:`<button onclick="openEditModal('${type}','${t.origId}',true,'${bD}')">✏️</button><button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                    return `<div class="lib-row" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 0.4fr 0.8fr 0.8fr 2.5fr 0.4fr;"><div style="font-size:0.75rem;padding-top:6px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><select onchange="saveComment('${t.id}_lead',this.value);showModule('${type}')" style="font-size:0.7rem;">${getDirOptions(t.sLead)}</select><input type="date" value="${t.st}" onchange="saveComment('${t.id}_start',this.value);showModule('${type}')" style="font-size:0.7rem;"><input type="number" value="${t.dur}" onchange="saveComment('${t.id}_dur',this.value);showModule('${type}')" style="font-size:0.7rem;"><div style="font-size:0.7rem;padding-top:6px;">${formatDateGB(t.eObj)}</div><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')" style="font-size:0.7rem;">${['Not Started','In Progress','Complete','Late'].map(o=>`<option ${t.sStat===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="min-height:28px;height:auto;resize:none;font-size:0.75rem;" oninput="autoResize(this);saveComment('${t.id}',this.value)">${t.sNot}</textarea>${ab}</div>`;
+                }).join('');
+                body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 2fr 1fr 0.8fr 0.4fr 0.8fr 0.8fr 2.5fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Activity</div><div>Lead</div><div>Start</div><div>Dur.</div><div>End</div><div>Status</div><div>Notes</div><div></div></div>${rows}`;
             }
 
             else if(type==='risks') {
@@ -350,15 +374,18 @@
                 let ms = ts.map(t => {
                     const id = sanitizeKey(t.id); const i=parseInt(wardData[currentWard][id+'_imp']||t.imp||"1")||1; const p=parseInt(wardData[currentWard][id+'_prob']||t.pr||"1")||1;
                     return { id, origId:t.id, d:t.d, k:t.k, sTy:wardData[currentWard][id+'_type']||t.ty||"", sImp:i, sPr:p, sc:i*p, sMit:wardData[currentWard][id]||t.mit||"" };
-                });
+                }).filter(m => !hiddenBase.includes(m.origId));
+
                 if(riskFilterLevel>0) ms=ms.filter(m=>m.sc>=riskFilterLevel); ms.sort((a,b)=>b.sc-a.sc);
 
                 let rows = ms.map(t => {
                     let rc = t.sc>=15?"background:#fff1f2;":t.sc>=8?"background:#fffbeb;":""; let cc = t.sc>=15?"#ef4444":t.sc>=8?"#d97706":"#333";
                     const mo=s=>[1,2,3,4,5].map(n=>`<option ${s===n?'selected':''}>${n}</option>`).join('');
-                    return `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 1fr 0.6fr 0.6fr 0.5fr 2fr 0.4fr;${rc}"><div style="font-size:0.75rem;padding-top:6px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><div style="font-size:0.75rem;padding-top:6px;">${t.sTy||'-'}</div><select onchange="saveComment('${t.id}_imp',this.value);showModule('${type}')" style="font-size:0.75rem;">${mo(t.sImp)}</select><select onchange="saveComment('${t.id}_prob',this.value);showModule('${type}')" style="font-size:0.75rem;">${mo(t.sPr)}</select><div style="font-size:1rem;font-weight:bold;color:${cc};text-align:center;padding-top:4px;">${t.sc}</div><textarea style="height:32px;font-size:0.75rem;" oninput="saveComment('${t.id}',this.value)">${t.sMit}</textarea><div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}')">✏️</button><button onclick="deleteItem('${t.k}')">🗑️</button>`:''}</div></div>`;
+                    const bD = encodeURIComponent(JSON.stringify(t));
+                    const ab = `<div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}',false)">✏️</button><button onclick="deleteItem('${t.k}',false)">🗑️</button>`:`<button onclick="openEditModal('${type}','${t.origId}',true,'${bD}')">✏️</button><button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                    return `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 0.8fr 0.4fr 0.4fr 0.5fr 3fr 0.4fr;${rc}"><div style="font-size:0.75rem;padding-top:6px;">${t.origId}</div><div style="font-size:0.8rem;font-weight:bold;padding-top:6px;">${t.d}</div><div style="font-size:0.75rem;padding-top:6px;">${t.sTy||'-'}</div><select onchange="saveComment('${t.id}_imp',this.value);showModule('${type}')" style="font-size:0.75rem;">${mo(t.sImp)}</select><select onchange="saveComment('${t.id}_prob',this.value);showModule('${type}')" style="font-size:0.75rem;">${mo(t.sPr)}</select><div style="font-size:1rem;font-weight:bold;color:${cc};text-align:center;padding-top:4px;">${t.sc}</div><textarea style="min-height:32px;height:auto;resize:none;font-size:0.75rem;" oninput="autoResize(this);saveComment('${t.id}',this.value)">${t.sMit}</textarea>${ab}</div>`;
                 }).join('');
-                body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 1.5fr 1fr 0.6fr 0.6fr 0.5fr 2fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Risk</div><div>Type</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation</div><div></div></div>${rows}`;
+                body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 1.5fr 0.8fr 0.4fr 0.4fr 0.5fr 3fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Risk</div><div>Type</div><div>Imp</div><div>Prob</div><div>Score</div><div>Mitigation</div><div></div></div>${rows}`;
             }
 
             else if(type==='changes') {
@@ -367,11 +394,15 @@
                 
                 let ms = ts.map(t => {
                     const id = sanitizeKey(t.id); return { id, origId:t.id, d:t.d, k:t.k, sReq:wardData[currentWard][id+'_req']||t.r||"", sDt:wardData[currentWard][id+'_date']||t.dt||"", sCo:wardData[currentWard][id+'_cost']||t.c||"", sTi:wardData[currentWard][id+'_time']||t.ti||"", sFu:wardData[currentWard][id+'_fund']||t.f||"", sSt:wardData[currentWard][id+'_status']||t.s||"Pending", sNot:wardData[currentWard][id]||t.n||"" };
-                });
+                }).filter(m => !hiddenBase.includes(m.origId));
                 
                 document.getElementById('dl-dir').innerHTML = [...new Set(db.directory.map(d=>findVal(d,'name')||findVal(d,'contact')).concat(Object.values(wardData['GLOBAL_DIR']||{}).map(d=>d.name)))].filter(Boolean).map(x=>`<option value="${x}">`).join('');
 
-                let rows = ms.map(t => `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><b>${t.d}</b><input type="text" list="dl-dir" value="${t.sReq}" onchange="saveComment('${t.id}_req',this.value)"><input type="date" value="${t.sDt}" onchange="saveComment('${t.id}_date',this.value)"><input type="number" value="${t.sCo}" onchange="saveComment('${t.id}_cost',this.value)"><input type="text" value="${t.sFu}" onchange="saveComment('${t.id}_fund',this.value)"><input type="number" value="${t.sTi}" onchange="saveComment('${t.id}_time',this.value)"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')">${['Pending','Instructed','Refused','Cancelled'].map(o=>`<option ${t.sSt===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="height:28px;" oninput="saveComment('${t.id}',this.value)">${t.sNot}</textarea><div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}')">✏️</button><button onclick="deleteItem('${t.k}')">🗑️</button>`:''}</div></div>`).join('');
+                let rows = ms.map(t => {
+                    const bD = encodeURIComponent(JSON.stringify(t));
+                    const ab = `<div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}',false)">✏️</button><button onclick="deleteItem('${t.k}',false)">🗑️</button>`:`<button onclick="openEditModal('${type}','${t.origId}',true,'${bD}')">✏️</button><button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                    return `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><b>${t.d}</b><input type="text" list="dl-dir" value="${t.sReq}" onchange="saveComment('${t.id}_req',this.value)"><input type="date" value="${t.sDt}" onchange="saveComment('${t.id}_date',this.value)"><input type="number" value="${t.sCo}" onchange="saveComment('${t.id}_cost',this.value)"><input type="text" value="${t.sFu}" onchange="saveComment('${t.id}_fund',this.value)"><input type="number" value="${t.sTi}" onchange="saveComment('${t.id}_time',this.value)"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')">${['Pending','Instructed','Refused','Cancelled'].map(o=>`<option ${t.sSt===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="min-height:28px;height:auto;resize:none;" oninput="autoResize(this);saveComment('${t.id}',this.value)">${t.sNot}</textarea>${ab}</div>`;
+                }).join('');
                 body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>No</div><div>Desc</div><div>Req</div><div>Date</div><div>Cost</div><div>Fund</div><div>Time</div><div>Status</div><div>Notes</div><div></div></div>${rows}`;
             }
 
@@ -379,7 +410,9 @@
                 let ts = [...db.equipLibrary.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'id')||findVal(t,'assetno'), d:findVal(t,'description')||findVal(t,'title'), r:findVal(t,'room')||findVal(t,'roomname'), g:findVal(t,'group')||"1", l:findVal(t,'location')||"", k:null}))];
                 if(wardData[currentWard]['equipmentLog']) Object.keys(wardData[currentWard]['equipmentLog']).forEach(k => { let e=wardData[currentWard]['equipmentLog'][k]; ts.push({id:e.id, d:e.desc, r:e.room, g:e.group, l:e.loc, k:k}); });
                 
-                let ms = ts.map(t => { const id=sanitizeKey(t.id); return { id, origId:t.id, k:t.k, sD:wardData[currentWard][id+'_desc']||t.d||"", sR:wardData[currentWard][id+'_room']||t.r||"", sG:wardData[currentWard][id+'_group']||t.g||"", sL:wardData[currentWard][id+'_loc']||t.l||"", sN:wardData[currentWard][id]||"" }; });
+                let ms = ts.map(t => { const id=sanitizeKey(t.id); return { id, origId:t.id, k:t.k, sD:wardData[currentWard][id+'_desc']||t.d||"", sR:wardData[currentWard][id+'_room']||t.r||"", sG:wardData[currentWard][id+'_group']||t.g||"", sL:wardData[currentWard][id+'_loc']||t.l||"", sN:wardData[currentWard][id]||"" }; }).filter(m => !hiddenBase.includes(m.origId));
+
+                document.getElementById('dl-desc').innerHTML = [...new Set(ms.map(e=>e.sD))].filter(Boolean).sort().map(d=>`<option value="${d}">`).join('');
 
                 if(equipSortBy === 'consol') {
                     let map = {}; ms.forEach(m=>{if(!map[m.sD])map[m.sD]=0; map[m.sD]++;});
@@ -388,22 +421,25 @@
                 } else {
                     if(equipCurrentRoom !== 'All') ms = ms.filter(m=>m.sR===equipCurrentRoom);
                     ms.sort((a,b) => equipSortBy==='desc' ? a.sD.localeCompare(b.sD) : a.sR.localeCompare(b.sR));
-                    let rows = ms.map(t => `<div class="lib-row" style="grid-template-columns:0.6fr 2fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><input type="text" value="${t.sD}" onchange="saveComment('${t.id}_desc',this.value)"><input type="text" value="${t.sR}" onchange="saveComment('${t.id}_room',this.value)"><select onchange="saveComment('${t.id}_group',this.value)">${['1','2','3'].map(o=>`<option ${t.sG===o?'selected':''}>${o}</option>`).join('')}</select><input type="text" list="dl-loc" value="${t.sL}" onchange="saveComment('${t.id}_loc',this.value)"><textarea style="height:28px;" oninput="saveComment('${t.id}',this.value)">${t.sN}</textarea><div class="action-btns">${t.k?`<button onclick="deleteEq('${t.k}')">🗑️</button>`:''}</div></div>`).join('');
-                    body.innerHTML += `<div class="row-header" style="grid-template-columns:0.6fr 2fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Desc</div><div>Room</div><div>Grp</div><div>Storage / Action</div><div>Notes</div><div></div></div>${rows}`;
+                    let rows = ms.map(t => {
+                        const ab = `<div class="action-btns">${t.k?`<button onclick="deleteEq('${t.k}')">🗑️</button>`:`<button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                        return `<div class="lib-row" style="grid-template-columns:0.6fr 2.5fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><input type="text" list="dl-desc" value="${t.sD}" onchange="saveComment('${t.id}_desc',this.value)"><input type="text" value="${t.sR}" onchange="saveComment('${t.id}_room',this.value)"><select onchange="saveComment('${t.id}_group',this.value)">${['1','2','3'].map(o=>`<option ${t.sG===o?'selected':''}>${o}</option>`).join('')}</select><input type="text" list="dl-loc" value="${t.sL}" onchange="saveComment('${t.id}_loc',this.value)"><textarea style="height:28px;" oninput="saveComment('${t.id}',this.value)">${t.sN}</textarea>${ab}</div>`;
+                    }).join('');
+                    body.innerHTML += `<div class="row-header" style="grid-template-columns:0.6fr 2.5fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Desc</div><div>Room</div><div>Grp</div><div>Storage / Action</div><div>Notes</div><div></div></div>${rows}`;
                 }
             }
 
             else if(type==='reports') {
                 let cts=[...db.changes.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'no')||findVal(t,'id'),c:findVal(t,'cost£')||findVal(t,'cost'),ti:findVal(t,'timeimpact')||findVal(t,'time'),s:findVal(t,'status')}))];
                 getCustomTasks('changes').forEach(c=>cts.push({id:c.no,c:c.cost,ti:c.time,s:c.status}));
-                let tC=0, tT=0; cts.forEach(t=>{ const id=sanitizeKey(t.id); const st=wardData[currentWard][id+'_status']||t.s||"Pending"; if(st==='Instructed'||st==='Pending'){ tC+=parseFloat(wardData[currentWard][id+'_cost']||t.c)||0; tT+=parseFloat(wardData[currentWard][id+'_time']||t.ti)||0; }});
+                let tC=0, tT=0; cts.forEach(t=>{ const id=sanitizeKey(t.id); const st=wardData[currentWard][id+'_status']||t.s||"Pending"; if(!hiddenBase.includes(t.id) && (st==='Instructed'||st==='Pending')){ tC+=parseFloat(wardData[currentWard][id+'_cost']||t.c)||0; tT+=parseFloat(wardData[currentWard][id+'_time']||t.ti)||0; }});
                 const bB = parseFloat(wardData[currentWard]['baseline_budget'])||0;
 
                 body.innerHTML += `<div style="display:flex;gap:15px;margin-bottom:20px;"><div style="flex:1;background:#f8fafc;padding:15px;border:1px solid #ccc;"><div style="font-weight:bold;margin-bottom:5px;">Baseline Budget: £${bB.toLocaleString()}</div><div>Approved Budget: <span style="color:${tC>0?'red':'green'}">£${(bB+tC).toLocaleString()}</span></div></div><div style="flex:1;background:#f8fafc;padding:15px;border:1px solid #ccc;"><div style="font-weight:bold;margin-bottom:5px;">Time Variance: <span style="color:${tT>0?'red':'green'}">+${tT} Days</span></div></div></div>`;
 
                 let eTs = [...db.enablers, ...db.moves].filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:(findVal(t,'taskid')||findVal(t,'id')), d:findVal(t,'taskdescription'), s:findVal(t,'currentstatus')}));
                 getCustomTasks('enablers').concat(getCustomTasks('moves')).forEach(c=>eTs.push({id:c.taskid, d:c.taskdescription, s:c.currentstatus}));
-                let lateE = eTs.map(t=>{ const id=sanitizeKey('EN-'+t.id); return {d:t.d, s:wardData[currentWard][id+'_status']||t.s}; }).filter(t=>t.s==='Late');
+                let lateE = eTs.filter(t=>!hiddenBase.includes(t.id)).map(t=>{ const id=sanitizeKey('EN-'+t.id); return {d:t.d, s:wardData[currentWard][id+'_status']||t.s}; }).filter(t=>t.s==='Late');
                 if(lateE.length>0) {
                     body.innerHTML += `<h3>Late Enablers & Moves</h3><div style="margin-bottom:20px;border:1px solid #fca5a5;padding:10px;background:#fee2e2;">${lateE.map(t=>`<div>• ${t.d}</div>`).join('')}</div>`;
                 }
@@ -417,11 +453,22 @@
         function saveComment(id,val){ if(!wardData[currentWard])wardData[currentWard]={}; wardData[currentWard][id]=val; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${id}`).set(val); }
         function saveDirComment(n,val){ if(!wardData['GLOBAL_DIR_NOTES'])wardData['GLOBAL_DIR_NOTES']={}; wardData['GLOBAL_DIR_NOTES'][n]=val; if(auth.currentUser)database.ref(`pmoData/GLOBAL_DIR_NOTES/${n}`).set(val); }
         
-        function openEditModal(type, ciKey) {
-            openModal(); document.getElementById('mEditId').value = ciKey; document.getElementById('modalTitle').innerText = "Edit Item";
-            let obj = type==='directory' ? wardData['GLOBAL_DIR'][ciKey] : wardData['CUSTOM_ITEMS'][ciKey].task;
+        function openEditModal(type, k, isBase, bData) {
+            openModal(); document.getElementById('mEditId').value = isBase ? "BASE_" + k : k;
+            document.getElementById('modalTitle').innerText = "Edit Item";
+            let obj;
+            if(isBase) {
+                let m = JSON.parse(decodeURIComponent(bData));
+                if(type==='programme') obj = {activity:m.d, lead:m.sLead, startdate:m.st, duration:m.dur};
+                else if(type==='risks') obj = {riskdescription:m.d, impact:m.sImp, prob:m.sPr};
+                else if(type==='changes') obj = {description:m.d, requestor:m.sReq, cost:m.sCo, time:m.sTi, fundingsource:m.sFu};
+                else obj = {taskdescription:m.d, whoresponsible:m.sWho, datedue:m.sDue, currentstatus:m.sStat};
+            } else {
+                obj = type==='directory' ? wardData['GLOBAL_DIR'][k] : wardData['CUSTOM_ITEMS'][k].task;
+            }
+            
             if(type==='directory') { document.getElementById('mDirName').value=obj.name; document.getElementById('mDirEmail').value=obj.email; document.getElementById('mDirRole').value=obj.role; }
-            else if(type==='brief') { document.getElementById('mDesc').value=obj.taskdescription; document.getElementById('mScopeCat').value=wardData['CUSTOM_ITEMS'][ciKey].category; }
+            else if(type==='brief') { document.getElementById('mDesc').value=obj.taskdescription; document.getElementById('mScopeCat').value=wardData['CUSTOM_ITEMS'][k].category; }
             else if(type==='programme') { document.getElementById('mDesc').value=obj.activity; document.getElementById('mLead').value=obj.lead; document.getElementById('mStart').value=obj.startdate; document.getElementById('mDur').value=obj.duration; }
             else if(type==='risks') { document.getElementById('mDesc').value=obj.riskdescription; document.getElementById('mImp').value=obj.impact; document.getElementById('mProb').value=obj.prob; }
             else if(type==='changes') { document.getElementById('mDesc').value=obj.description; document.getElementById('mChangeReq').value=obj.requestor; document.getElementById('mChangeCost').value=obj.cost; document.getElementById('mChangeTime').value=obj.time; document.getElementById('mChangeFund').value=obj.fundingsource; }
@@ -443,7 +490,14 @@
         function closeModal() { document.getElementById('taskModal').style.display='none'; }
 
         function saveNewTask() {
-            const editId = document.getElementById('mEditId').value;
+            let editId = document.getElementById('mEditId').value;
+            let isBaseEdit = editId.startsWith("BASE_");
+            let baseIdToHide = "";
+            if(isBaseEdit) {
+                baseIdToHide = editId.replace("BASE_", "");
+                editId = ""; 
+            }
+
             if(currentType==='directory') {
                 const n=document.getElementById('mDirName').value, e=document.getElementById('mDirEmail').value, r=document.getElementById('mDirRole').value; if(!n)return alert("Enter name");
                 const k = editId || "DIR_"+Date.now(); if(!wardData['GLOBAL_DIR'])wardData['GLOBAL_DIR']={};
@@ -469,6 +523,13 @@
             const k = editId || "CI_"+Date.now(); if(!wardData['CUSTOM_ITEMS'])wardData['CUSTOM_ITEMS']={};
             wardData['CUSTOM_ITEMS'][k] = {type:currentType, ward:currentWard, task:t, _ciKey:k, ...extra};
             if(auth.currentUser)database.ref(`pmoData/CUSTOM_ITEMS/${k}`).set(wardData['CUSTOM_ITEMS'][k]);
+
+            if(isBaseEdit) {
+                if(!wardData[currentWard]['_hidden']) wardData[currentWard]['_hidden']=[]; 
+                wardData[currentWard]['_hidden'].push(baseIdToHide); 
+                if(auth.currentUser) database.ref(`pmoData/${currentWard}/_hidden`).set(wardData[currentWard]['_hidden']);
+            }
+
             closeModal(); showModule(currentType);
         }
 
