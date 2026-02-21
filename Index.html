@@ -140,7 +140,7 @@
             <div id="standardDescField"><label style="display:block; margin-top:10px; font-weight:bold;">Description / Title</label><input type="text" id="mDesc" list="dl-desc" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div>
             
             <div id="taskFields" style="display:none;">
-                <label style="display:block; margin-top:10px; font-weight:bold;">Who Responsible</label><select id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
+                <label style="display:block; margin-top:10px; font-weight:bold;">Owner / Responsible</label><select id="mWho" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
                 <label style="display:block; margin-top:10px; font-weight:bold;">Due Date</label><input type="date" id="mDue" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Status</label>
                 <select id="mStatus" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="Not Started">Not Started</option><option value="In Progress">In Progress</option><option value="Complete">Complete</option><option value="Late">Late</option></select>
@@ -153,15 +153,13 @@
 
             <div id="riskFields" style="display:none;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Risk Type</label>
-                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:5px; border:1px solid #ccc; padding:10px; border-radius:4px; background:#f8fafc; box-sizing:border-box;">
-                    <label><input type="checkbox" value="Programme" class="risk-type-cb"> Programme</label><label><input type="checkbox" value="Cost" class="risk-type-cb"> Cost</label><label><input type="checkbox" value="Disruption" class="risk-type-cb"> Disruption</label><label><input type="checkbox" value="H&S" class="risk-type-cb"> H&S</label><label><input type="checkbox" value="Compliance" class="risk-type-cb"> Compliance</label>
-                </div>
+                <input type="text" id="mRiskType" list="dl-risktype" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="Select or type new...">
                 <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Impact (1-5)</label><select id="mImp" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Prob (1-5)</label><select id="mProb" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div></div>
             </div>
 
             <div id="changeFields" style="display:none;">
                 <label style="display:block; margin-top:10px; font-weight:bold;">Requestor</label>
-                <input type="text" id="mChangeReq" list="dl-dir" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;" placeholder="Select or type new...">
+                <select id="mChangeReq" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></select>
                 <label style="display:block; margin-top:10px; font-weight:bold;">Date Requested</label><input type="date" id="mChangeDate" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                 <div style="display:flex; gap:10px;"><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Cost Impact (£)</label><input type="number" id="mChangeCost" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div><div style="flex:1;"><label style="display:block; margin-top:10px; font-weight:bold;">Time Impact (Days)</label><input type="number" id="mChangeTime" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;"></div></div>
                 <label style="display:block; margin-top:10px; font-weight:bold;">Funding Source</label><input type="text" id="mChangeFund" style="width:100%; padding:8px; margin-top:5px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
@@ -184,8 +182,9 @@
             <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="closeModal()" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveNewTask()" style="background:#10b981;">Save</button></div>
         </div>
     </div>
-    <datalist id="dl-desc"></datalist><datalist id="dl-room"></datalist><datalist id="dl-dir"></datalist><datalist id="dl-cat"></datalist>
+    <datalist id="dl-desc"></datalist><datalist id="dl-room"></datalist><datalist id="dl-cat"></datalist>
     <datalist id="dl-loc"><option value="Dispose"><option value="Order Shortfall"><option value="Retain / Store"></datalist>
+    <datalist id="dl-risktype"><option value="Programme"><option value="Cost"><option value="Disruption"><option value="H&S"><option value="Compliance"></datalist>
 
     <script>
         const firebaseConfig = { apiKey: "AIzaSyDL72CyUAWzo6eArqZEujTQ79fWA3Z6dYw", authDomain: "refurbishment-pm-console.firebaseapp.com", databaseURL: "https://refurbishment-pm-console-default-rtdb.europe-west1.firebasedatabase.app", projectId: "refurbishment-pm-console", storageBucket: "refurbishment-pm-console.firebasestorage.app", messagingSenderId: "459272472414", appId: "1:459272472414:web:dd1781e5558908f2d5b1cf" };
@@ -245,12 +244,21 @@
         function editProjectInfo() { if(!wardData[currentWard])wardData[currentWard]={}; document.getElementById('epName').value=currentWard; ['epBudget','epProg','epMsBriefing','epMsDesign','epMsCosting','epMsDelivery'].forEach(i=>document.getElementById(i).value = wardData[currentWard][i.replace('ep','').toLowerCase()]||''); switchView('view-edit-project'); }
         function saveProjectInfo() { ['epBudget','epProg','epMsBriefing','epMsDesign','epMsCosting','epMsDelivery'].forEach(i=>wardData[currentWard][i.replace('ep','').toLowerCase()] = document.getElementById(i).value); saveToCloud(); switchView('view-menu'); }
 
-        function getDirOptions(s) {
-            let n = db.directory.map(d=>findVal(d,'name')||findVal(d,'contact')).filter(x=>x);
-            if(wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(i=>{if(i&&i.name)n.push(i.name);});
-            n=[...new Set(n)].sort(); document.getElementById('dl-dir').innerHTML = n.map(x=>`<option value="${x}">`).join('');
-            return `<option value="">Select...</option>` + n.map(x=>`<option value="${x}" ${x===s?'selected':''}>${x}</option>`).join('');
+        function findVal(o, k) {
+            if (!o) return "";
+            const kClean = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const x = Object.keys(o).find(key => key.toLowerCase().replace(/[^a-z0-9]/g, '') === kClean);
+            return x ? o[x] : "";
         }
+
+        function getDirOptions(s) {
+            let n = [];
+            db.directory.forEach(d => { let val = findVal(d,'name')||findVal(d,'contact'); if(val) n.push(val); });
+            if(wardData['GLOBAL_DIR']) Object.values(wardData['GLOBAL_DIR']).forEach(i=>{if(i&&i.name)n.push(i.name);});
+            n=[...new Set(n)].sort();
+            return `<option value="">Select Owner...</option>` + n.map(x=>`<option value="${x}" ${x===s?'selected':''}>${x}</option>`).join('');
+        }
+        
         function calcEndObj(s, d) { if(!s||!d)return null; let dt=new Date(s); let dy=parseInt(d); if(isNaN(dy)||dy<=0)return null; if(dt.getDay()===0)dt.setDate(dt.getDate()+1); if(dt.getDay()===6)dt.setDate(dt.getDate()+2); dy-=1; while(dy>0){ dt.setDate(dt.getDate()+1); if(dt.getDay()!==0&&dt.getDay()!==6)dy--; } return dt; }
         function formatDateGB(d) { if(!d)return ""; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
 
@@ -294,7 +302,7 @@
             else if(type==='enablers' || type==='moves') filter = `<button class="btn" style="background:#8b5cf6;" onclick="enablerFilterActive=!enablerFilterActive;showModule('${type}')">${enablerFilterActive?'👁 Show All':'👁 Hide Unused'}</button> <button class="btn" style="background:#f59e0b;" onclick="enablerSort=!enablerSort;showModule('${type}')">${enablerSort?'Sort: Default':'Sort: Due Date'}</button>`;
             else if(type==='risks') filter = `<select class="btn" style="background:#8b5cf6;color:white;" onchange="riskFilterLevel=parseInt(this.value);showModule('risks')"><option value="0" ${riskFilterLevel===0?'selected':''}>Show All</option><option value="8" ${riskFilterLevel===8?'selected':''}>Med/High (8+)</option><option value="12" ${riskFilterLevel===12?'selected':''}>Score 12+</option></select>`;
             else if(type==='equipment') {
-                const rs = [...new Set([...db.equipLibrary.map(t=>findVal(t,'room')||findVal(t,'roomname')), ...(wardData[currentWard]['_customRooms']||[]), ...(wardData[currentWard]['equipmentLog']?Object.values(wardData[currentWard]['equipmentLog']).map(e=>e.room):[])])].filter(Boolean).sort();
+                const rs = [...new Set([...(wardData[currentWard]['_customRooms']||[]), ...(wardData[currentWard]['equipmentLog']?Object.values(wardData[currentWard]['equipmentLog']).map(e=>e.room):[])])].filter(Boolean).sort();
                 filter = `<select class="btn" style="background:#8b5cf6;color:white;" onchange="equipCurrentRoom=this.value;showModule('equipment')"><option value="All" ${equipCurrentRoom==='All'?'selected':''}>All Rooms</option>${rs.map(r=>`<option value="${r}" ${equipCurrentRoom===r?'selected':''}>${r}</option>`).join('')}</select> <select class="btn" style="background:#f59e0b;color:white;" onchange="equipSortBy=this.value;showModule('equipment')"><option value="room" ${equipSortBy==='room'?'selected':''}>Sort: Room</option><option value="desc" ${equipSortBy==='desc'?'selected':''}>Sort: Desc</option><option value="consol" ${equipSortBy==='consol'?'selected':''}>Consolidate</option></select>`;
             }
 
@@ -335,7 +343,7 @@
             }
 
             else if(type==='enablers' || type==='moves') {
-                let ts = [...(type==='enablers'?db.enablers:db.moves).filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:(type==='enablers'?'EN-':'MV-')+(findVal(t,'taskid')||findVal(t,'id')), d:findVal(t,'taskdescription'), w:findVal(t,'whoresponsible'), du:findVal(t,'datedue'), s:findVal(t,'currentstatus'), k:null}))];
+                let ts = [...(type==='enablers'?db.enablers:db.moves).filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:(type==='enablers'?'EN-':'MV-')+(findVal(t,'taskid')||findVal(t,'id')), d:findVal(t,'taskdescription'), w:findVal(t,'whoresponsible')||findVal(t,'owner')||findVal(t,'who'), du:findVal(t,'datedue'), s:findVal(t,'currentstatus'), k:null}))];
                 getCustomTasks(type).forEach(c => ts.push({id:c.taskid, d:c.taskdescription, w:c.whoresponsible, du:c.datedue, s:c.currentstatus, k:c._ciKey}));
                 
                 let ms = ts.map(t => {
@@ -381,7 +389,7 @@
             }
 
             else if(type==='risks') {
-                let ts = [...db.risks.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'riskid')||findVal(t,'id'), d:findVal(t,'riskdescription')||findVal(t,'risk'), ty:findVal(t,'type'), imp:findVal(t,'impact'), pr:findVal(t,'prob'), mit:findVal(t,'mitigatingactions'), k:null}))];
+                let ts = [...db.risks.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'riskid')||findVal(t,'id'), d:findVal(t,'riskdescription')||findVal(t,'risk'), ty:findVal(t,'type')||findVal(t,'risktype')||findVal(t,'category'), imp:findVal(t,'impact'), pr:findVal(t,'prob'), mit:findVal(t,'mitigatingactions'), k:null}))];
                 getCustomTasks('risks').forEach(c => ts.push({id:c.riskid, d:c.riskdescription, ty:c.type, imp:c.impact, pr:c.prob, mit:c.mitigatingactions, k:c._ciKey}));
                 
                 let ms = ts.map(t => {
@@ -408,26 +416,29 @@
                 let ms = ts.map(t => {
                     const id = sanitizeKey(t.id); return { id, origId:t.id, d:t.d, k:t.k, sReq:wardData[currentWard][id+'_req']||t.r||"", sDt:wardData[currentWard][id+'_date']||t.dt||"", sCo:wardData[currentWard][id+'_cost']||t.c||"", sTi:wardData[currentWard][id+'_time']||t.ti||"", sFu:wardData[currentWard][id+'_fund']||t.f||"", sSt:wardData[currentWard][id+'_status']||t.s||"Pending", sNot:wardData[currentWard][id]||t.n||"" };
                 }).filter(m => !hiddenBase.includes(m.origId));
-                
-                document.getElementById('dl-dir').innerHTML = [...new Set(db.directory.map(d=>findVal(d,'name')||findVal(d,'contact')).concat(Object.values(wardData['GLOBAL_DIR']||{}).map(d=>d.name)))].filter(Boolean).map(x=>`<option value="${x}">`).join('');
 
                 let rows = ms.map(t => {
                     const bD = encodeURIComponent(JSON.stringify(t));
                     const ab = `<div class="action-btns">${t.k?`<button onclick="openEditModal('${type}','${t.k}',false)">✏️</button><button onclick="deleteItem('${t.k}',false)">🗑️</button>`:`<button onclick="openEditModal('${type}','${t.origId}',true,'${bD}')">✏️</button><button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
-                    return `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><b>${t.d}</b><input type="text" list="dl-dir" value="${t.sReq}" onchange="saveComment('${t.id}_req',this.value)"><input type="date" value="${t.sDt}" onchange="saveComment('${t.id}_date',this.value)"><input type="number" value="${t.sCo}" onchange="saveComment('${t.id}_cost',this.value)"><input type="text" value="${t.sFu}" onchange="saveComment('${t.id}_fund',this.value)"><input type="number" value="${t.sTi}" onchange="saveComment('${t.id}_time',this.value)"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')">${['Pending','Instructed','Refused','Cancelled'].map(o=>`<option ${t.sSt===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="min-height:28px;height:auto;resize:none;" oninput="autoResize(this);saveComment('${t.id}',this.value)">${t.sNot}</textarea>${ab}</div>`;
+                    return `<div class="lib-row" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><b>${t.d}</b><select onchange="saveComment('${t.id}_req',this.value)">${getDirOptions(t.sReq)}</select><input type="date" value="${t.sDt}" onchange="saveComment('${t.id}_date',this.value)"><input type="number" value="${t.sCo}" onchange="saveComment('${t.id}_cost',this.value)"><input type="text" value="${t.sFu}" onchange="saveComment('${t.id}_fund',this.value)"><input type="number" value="${t.sTi}" onchange="saveComment('${t.id}_time',this.value)"><select onchange="saveComment('${t.id}_status',this.value);showModule('${type}')">${['Pending','Instructed','Refused','Cancelled'].map(o=>`<option ${t.sSt===o?'selected':''}>${o}</option>`).join('')}</select><textarea style="min-height:28px;height:auto;resize:none;" oninput="autoResize(this);saveComment('${t.id}',this.value)">${t.sNot}</textarea>${ab}</div>`;
                 }).join('');
                 body.innerHTML += `<div class="row-header" style="grid-template-columns:0.4fr 1.5fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>No</div><div>Desc</div><div>Req</div><div>Date</div><div>Cost</div><div>Fund</div><div>Time</div><div>Status</div><div>Notes</div><div></div></div>${rows}`;
             }
 
             else if(type==='equipment') {
-                let ts = [...db.equipLibrary.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'id')||findVal(t,'assetno'), d:findVal(t,'description')||findVal(t,'title'), r:findVal(t,'room')||findVal(t,'roomname'), g:findVal(t,'group')||"1", l:findVal(t,'location')||"", k:null}))];
-                if(wardData[currentWard]['equipmentLog']) Object.keys(wardData[currentWard]['equipmentLog']).forEach(k => { let e=wardData[currentWard]['equipmentLog'][k]; ts.push({id:e.id, d:e.desc, r:e.room, g:e.group, l:e.loc, k:k}); });
+                let ms = [];
+                if(wardData[currentWard]['equipmentLog']) {
+                    Object.keys(wardData[currentWard]['equipmentLog']).forEach(k => {
+                        let e = wardData[currentWard]['equipmentLog'][k];
+                        ms.push({ id: sanitizeKey(e.id), origId: e.id, sD: wardData[currentWard][sanitizeKey(e.id)+'_desc']||e.desc||"", sR: wardData[currentWard][sanitizeKey(e.id)+'_room']||e.room||"", sG: wardData[currentWard][sanitizeKey(e.id)+'_group']||e.group||"", sL: wardData[currentWard][sanitizeKey(e.id)+'_loc']||e.loc||"", k: k, sN: wardData[currentWard][sanitizeKey(e.id)]||"" });
+                    });
+                }
                 
-                let ms = ts.map(t => { const id=sanitizeKey(t.id); return { id, origId:t.id, k:t.k, sD:wardData[currentWard][id+'_desc']||t.d||"", sR:wardData[currentWard][id+'_room']||t.r||"", sG:wardData[currentWard][id+'_group']||t.g||"", sL:wardData[currentWard][id+'_loc']||t.l||"", sN:wardData[currentWard][id]||"" }; }).filter(m => !hiddenBase.includes(m.origId));
+                document.getElementById('dl-desc').innerHTML = [...new Set(db.equipLibrary.map(t=>findVal(t,'description')||findVal(t,'title')||findVal(t,'item')))].filter(Boolean).sort().map(d=>`<option value="${d}">`).join('');
 
-                document.getElementById('dl-desc').innerHTML = [...new Set(ms.map(e=>e.sD))].filter(Boolean).sort().map(d=>`<option value="${d}">`).join('');
-
-                if(equipSortBy === 'consol') {
+                if(ms.length === 0) {
+                    body.innerHTML += `<div style="text-align:center; padding:40px; color:#64748b;">No items added yet. Click "+ Add New Room" to begin your audit.</div>`;
+                } else if(equipSortBy === 'consol') {
                     let map = {}; ms.forEach(m=>{if(!map[m.sD])map[m.sD]=0; map[m.sD]++;});
                     let rows = Object.keys(map).sort().map(d => `<div class="lib-row" style="grid-template-columns:3fr 1fr;"><div style="font-weight:bold;">${d}</div><div>${map[d]} items</div></div>`).join('');
                     body.innerHTML += `<div class="row-header" style="grid-template-columns:3fr 1fr;background:#333;color:white;"><div>Description</div><div>Total Count</div></div>${rows}`;
@@ -435,7 +446,7 @@
                     if(equipCurrentRoom !== 'All') ms = ms.filter(m=>m.sR===equipCurrentRoom);
                     ms.sort((a,b) => equipSortBy==='desc' ? a.sD.localeCompare(b.sD) : a.sR.localeCompare(b.sR));
                     let rows = ms.map(t => {
-                        const ab = `<div class="action-btns">${t.k?`<button onclick="deleteEq('${t.k}')">🗑️</button>`:`<button onclick="deleteItem('${t.origId}',true)">🗑️</button>`}</div>`;
+                        const ab = `<div class="action-btns"><button onclick="deleteEq('${t.k}')">🗑️</button></div>`;
                         return `<div class="lib-row" style="grid-template-columns:0.6fr 2.5fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;font-size:0.75rem;align-items:center;"><div>${t.origId}</div><input type="text" list="dl-desc" value="${t.sD}" onchange="saveComment('${t.id}_desc',this.value)"><input type="text" value="${t.sR}" onchange="saveComment('${t.id}_room',this.value)"><select onchange="saveComment('${t.id}_group',this.value)">${['1','2','3'].map(o=>`<option ${t.sG===o?'selected':''}>${o}</option>`).join('')}</select><input type="text" list="dl-loc" value="${t.sL}" onchange="saveComment('${t.id}_loc',this.value)"><textarea style="height:28px;" oninput="saveComment('${t.id}',this.value)">${t.sN}</textarea>${ab}</div>`;
                     }).join('');
                     body.innerHTML += `<div class="row-header" style="grid-template-columns:0.6fr 2.5fr 1.5fr 0.6fr 1.5fr 1.5fr 0.4fr;background:#333;color:white;font-size:0.8rem;"><div>ID</div><div>Desc</div><div>Room</div><div>Grp</div><div>Storage / Action</div><div>Notes</div><div></div></div>${rows}`;
@@ -481,7 +492,7 @@
         }
 
         function deleteEq(k) { if(confirm("Delete item?")){ delete wardData[currentWard]['equipmentLog'][k]; if(auth.currentUser)database.ref(`pmoData/${currentWard}/equipmentLog/${k}`).remove(); showModule('equipment'); } }
-        function promptNewRoom(){ const r=prompt("New Room:"); if(r){ if(!wardData[currentWard]['_customRooms'])wardData[currentWard]['_customRooms']=[]; wardData[currentWard]['_customRooms'].push(r); if(auth.currentUser)database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']); equipCurrentRoom=r; showModule('equipment'); } }
+        function promptNewRoom(){ const r=prompt("New Room Name/Number:"); if(r){ if(!wardData[currentWard]['_customRooms'])wardData[currentWard]['_customRooms']=[]; if(!wardData[currentWard]['_customRooms'].includes(r)){wardData[currentWard]['_customRooms'].push(r); if(auth.currentUser)database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);} equipCurrentRoom=r; showModule('equipment'); } }
         function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
         function saveComment(id,val){ if(!wardData[currentWard])wardData[currentWard]={}; wardData[currentWard][id]=val; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${id}`).set(val); }
         function saveDirComment(n,val){ if(!wardData['GLOBAL_DIR_NOTES'])wardData['GLOBAL_DIR_NOTES']={}; wardData['GLOBAL_DIR_NOTES'][n]=val; if(auth.currentUser)database.ref(`pmoData/GLOBAL_DIR_NOTES/${n}`).set(val); }
@@ -493,7 +504,7 @@
             if(isBase) {
                 let m = JSON.parse(decodeURIComponent(bData));
                 if(type==='programme') obj = {activity:m.d, lead:m.sLead, startdate:m.st, duration:m.dur};
-                else if(type==='risks') obj = {riskdescription:m.d, impact:m.sImp, prob:m.sPr};
+                else if(type==='risks') obj = {riskdescription:m.d, type:m.sTy, impact:m.sImp, prob:m.sPr};
                 else if(type==='changes') obj = {description:m.d, requestor:m.sReq, cost:m.sCo, time:m.sTi, fundingsource:m.sFu};
                 else obj = {taskdescription:m.d, whoresponsible:m.sWho, datedue:m.sDue, currentstatus:m.sStat};
             } else {
@@ -503,7 +514,7 @@
             if(type==='directory') { document.getElementById('mDirName').value=obj.name; document.getElementById('mDirEmail').value=obj.email; document.getElementById('mDirRole').value=obj.role; }
             else if(type==='brief') { document.getElementById('mDesc').value=obj.taskdescription; document.getElementById('mScopeCat').value=wardData['CUSTOM_ITEMS'][k].category; }
             else if(type==='programme') { document.getElementById('mDesc').value=obj.activity; document.getElementById('mLead').value=obj.lead; document.getElementById('mStart').value=obj.startdate; document.getElementById('mDur').value=obj.duration; }
-            else if(type==='risks') { document.getElementById('mDesc').value=obj.riskdescription; document.getElementById('mImp').value=obj.impact; document.getElementById('mProb').value=obj.prob; }
+            else if(type==='risks') { document.getElementById('mDesc').value=obj.riskdescription; document.getElementById('mRiskType').value=obj.type; document.getElementById('mImp').value=obj.impact; document.getElementById('mProb').value=obj.prob; }
             else if(type==='changes') { document.getElementById('mDesc').value=obj.description; document.getElementById('mChangeReq').value=obj.requestor; document.getElementById('mChangeCost').value=obj.cost; document.getElementById('mChangeTime').value=obj.time; document.getElementById('mChangeFund').value=obj.fundingsource; }
             else { document.getElementById('mDesc').value=obj.taskdescription; document.getElementById('mWho').value=obj.whoresponsible; document.getElementById('mDue').value=obj.datedue; document.getElementById('mStatus').value=obj.currentstatus; }
         }
@@ -515,7 +526,7 @@
             else if(currentType==='brief') { document.getElementById('standardDescField').style.display='block'; document.getElementById('scopeFields').style.display='block'; }
             else if(currentType==='risks') { document.getElementById('standardDescField').style.display='block'; document.getElementById('riskFields').style.display='block'; }
             else if(currentType==='programme') { document.getElementById('standardDescField').style.display='block'; document.getElementById('progFields').style.display='block'; document.getElementById('mLead').innerHTML=getDirOptions(''); }
-            else if(currentType==='changes') { document.getElementById('standardDescField').style.display='block'; document.getElementById('changeFields').style.display='block'; }
+            else if(currentType==='changes') { document.getElementById('standardDescField').style.display='block'; document.getElementById('changeFields').style.display='block'; document.getElementById('mChangeReq').innerHTML=getDirOptions(''); }
             else if(currentType==='equipment') { document.getElementById('standardDescField').style.display='block'; document.getElementById('equipFields').style.display='block'; document.getElementById('mEquipRoom').value=(equipCurrentRoom==='All')?'':equipCurrentRoom; }
             else { document.getElementById('standardDescField').style.display='block'; document.getElementById('taskFields').style.display='block'; document.getElementById('mWho').innerHTML=getDirOptions(''); }
             document.querySelectorAll('#taskModal input, #taskModal select').forEach(i=> {if(i.id!=='mEditId'&&i.id!=='mEquipRoom') i.value='';});
@@ -543,7 +554,7 @@
             
             let extra = {};
             if(currentType==='brief') { t={taskdescription:desc}; extra={category:document.getElementById('mScopeCat').value||"Uncategorized"}; }
-            else if(currentType==='risks') { const st=Array.from(document.querySelectorAll('.risk-type-cb:checked')).map(cb=>cb.value).join(', '); t={riskid:nid, riskdescription:desc, impact:document.getElementById('mImp').value||"1", prob:document.getElementById('mProb').value||"1", type: st}; if(!editId){ wardData[currentWard][sanitizeKey(nid)+'_type']=st; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${sanitizeKey(nid)}_type`).set(st); } }
+            else if(currentType==='risks') { const st=document.getElementById('mRiskType').value; t={riskid:nid, riskdescription:desc, impact:document.getElementById('mImp').value||"1", prob:document.getElementById('mProb').value||"1", type: st}; if(!editId){ wardData[currentWard][sanitizeKey(nid)+'_type']=st; if(auth.currentUser)database.ref(`pmoData/${currentWard}/${sanitizeKey(nid)}_type`).set(st); } }
             else if(currentType==='programme') { t={activityid:nid, activity:desc, lead:document.getElementById('mLead').value, startdate:document.getElementById('mStart').value, duration:document.getElementById('mDur').value}; }
             else if(currentType==='changes') { t={no:nid, description:desc, requestor:document.getElementById('mChangeReq').value, date:document.getElementById('mChangeDate').value, cost:document.getElementById('mChangeCost').value, time:document.getElementById('mChangeTime').value, fundingsource:document.getElementById('mChangeFund').value, status:document.getElementById('mChangeStatus').value}; }
             else if(currentType==='equipment') {
@@ -566,22 +577,20 @@
             closeModal(); showModule(currentType);
         }
 
-        function findVal(o,k){if(!o)return"";const x=Object.keys(o).find(x=>x.toLowerCase().replace(/\s/g,'')===k.toLowerCase().replace(/\s/g,''));return x?o[x]:"";}
-        function downloadData(){const d='data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(wardData));const a=document.createElement('a');a.href=d;a.download=`Backup_${new Date().toISOString().slice(0,10)}.json`;a.click();}
-        function uploadData(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){try{wardData=JSON.parse(ev.target.result);saveToCloud();alert("Restored!");location.reload();}catch(er){alert("Error.");}};r.readAsText(f);}
         function downloadPDF() { 
-            document.querySelectorAll('.no-print').forEach(e=>e.style.display='none'); 
+            document.querySelectorAll('.no-print, .action-btns').forEach(e=>e.style.display='none'); 
             let sl=[]; 
             document.querySelectorAll('textarea, input:not([type="hidden"]), select').forEach(e=>{ 
-                if(e.closest('#taskModal') || e.closest('.action-btns')) return; 
+                if(e.closest('#taskModal')) return; 
                 const d=document.createElement('div'); 
                 d.innerText=(e.tagName==='SELECT'&&e.selectedIndex>=0)?e.options[e.selectedIndex].text:e.value||""; 
                 d.style.cssText=`width:100%;font-size:${getComputedStyle(e).fontSize};padding:4px;font-family:sans-serif;box-sizing:border-box;white-space:pre-wrap;`; 
                 e.style.display='none'; e.parentNode.insertBefore(d,e); sl.push({a:e,r:d}); 
             }); 
-            const modNames = {brief:'Scope', enablers:'Enablers', moves:'Moves', programme:'Programme', risks:'Risks', changes:'Changes', equipment:'Equipment', directory:'Directory', reports:'Report'};
+            const modNames = {brief:'Scope_Builder', enablers:'Enablers', moves:'Ward_Moves', programme:'Programme', risks:'Risk_Register', changes:'Change_Control', equipment:'Equipment_Audit', directory:'Project_Directory', reports:'Monthly_Report'};
             html2pdf().set({margin:0.4,filename:`${currentWard}_${modNames[currentType]||'Export'}.pdf`,jsPDF:{unit:'in',format:'a4',orientation:(currentType==='brief'||currentType==='reports')?'portrait':'landscape'}}).from(document.getElementById('moduleBody')).save().then(()=>{ 
                 document.querySelectorAll('.no-print').forEach(e=>e.style.display=''); 
+                document.querySelectorAll('.action-btns').forEach(e=>e.style.display='flex');
                 sl.forEach(i=>{i.r.remove();i.a.style.display='';}); 
             }); 
         }
