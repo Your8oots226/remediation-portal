@@ -81,7 +81,7 @@
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="npMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="npMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="npMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Baseline Completion Date</label><input type="date" id="npMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="switchView('view-home');" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveNewProject()" style="background:#10b981;">Create Project</button></div>
             </div>
@@ -100,7 +100,7 @@
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Briefing</label><input type="date" id="epMsBriefing" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Design</label><input type="date" id="epMsDesign" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                     <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Costing</label><input type="date" id="epMsCosting" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
-                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Delivery</label><input type="date" id="epMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
+                    <div><label style="display:block; margin-top:10px; font-weight:bold; font-size:0.85rem;">Baseline Completion Date</label><input type="date" id="epMsDelivery" style="width:100%; padding:8px; margin-top:5px; border:1px solid #cbd5e1; border-radius:4px; box-sizing:border-box;"></div>
                 </div>
                 <div style="margin-top:30px; display:flex; justify-content:flex-end; gap:10px;"><button class="btn" onclick="switchView('view-menu')" style="background:#64748b;">Cancel</button><button class="btn" onclick="saveProjectInfo()" style="background:#f59e0b;">Save Updates</button></div>
             </div>
@@ -274,6 +274,7 @@
         }
         
         function calcEndObj(s, d) { if(!s||!d)return null; let dt=new Date(s); let dy=parseInt(d); if(isNaN(dy)||dy<=0)return null; if(dt.getDay()===0)dt.setDate(dt.getDate()+1); if(dt.getDay()===6)dt.setDate(dt.getDate()+2); dy-=1; while(dy>0){ dt.setDate(dt.getDate()+1); if(dt.getDay()!==0&&dt.getDay()!==6)dy--; } return dt; }
+        function addWorkingDays(startDate, daysToAdd) { let dt = new Date(startDate); let added = 0; let direction = daysToAdd >= 0 ? 1 : -1; let absDays = Math.abs(daysToAdd); while(added < absDays) { dt.setDate(dt.getDate() + direction); if(dt.getDay() !== 0 && dt.getDay() !== 6) { added++; } } return dt; }
         function formatDateGB(d) { if(!d)return ""; return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`; }
 
         function getCustomTasks(type) { 
@@ -496,7 +497,7 @@
                 let currCompStr = "Not Set";
                 if(bCompStr) {
                     let d = new Date(bCompStr);
-                    if(tT) d.setDate(d.getDate() + tT);
+                    if(tT) d = addWorkingDays(d, tT);
                     currCompStr = formatDateGB(d);
                 }
 
@@ -505,13 +506,13 @@
                         <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:8px; color:#334155;">Financial Status</h3>
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Baseline Budget:</span> <strong>£${bB.toLocaleString()}</strong></div>
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Approved Changes:</span> <strong style="color:${tC>0?'#ef4444':(tC<0?'#10b981':'#334155')}">£${tC.toLocaleString()}</strong></div>
-                        <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:1.1rem;"><span>Current Budget:</span> <strong style="color:#0f172a;">£${(bB+tC).toLocaleString()}</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:1.1rem;"><span>Current Approved Budget:</span> <strong style="color:#0f172a;">£${(bB+tC).toLocaleString()}</strong></div>
                     </div>
                     <div class="report-card">
                         <h3 style="margin-top:0; border-bottom:1px solid #e2e8f0; padding-bottom:8px; color:#334155;">Schedule Status</h3>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Baseline Delivery:</span> <strong>${bCompStr?formatDateGB(new Date(bCompStr)):'Not Set'}</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Baseline Completion Date:</span> <strong>${bCompStr?formatDateGB(new Date(bCompStr)):'Not Set'}</strong></div>
                         <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Approved Variance:</span> <strong style="color:${tT>0?'#ef4444':(tT<0?'#10b981':'#334155')}">${tT>0?'+':''}${tT} Days</strong></div>
-                        <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:1.1rem;"><span>Current Delivery:</span> <strong style="color:#0f172a;">${currCompStr}</strong></div>
+                        <div style="display:flex; justify-content:space-between; margin-top:12px; padding-top:12px; border-top:1px dashed #cbd5e1; font-size:1.1rem;"><span>Current Completion Date:</span> <strong style="color:#0f172a;">${currCompStr}</strong></div>
                     </div>
                 </div>`;
 
@@ -522,7 +523,7 @@
 
                 let pTs = [...db.programme.filter(t=>{const w=findVal(t,'ward')||findVal(t,'departmentalname');return w===currentWard||!w;}).map(t=>({id:findVal(t,'activityid')||findVal(t,'id'), d:findVal(t,'activity')||findVal(t,'milestone'), st:findVal(t,'startdate'), du:findVal(t,'duration'), s:findVal(t,'status')}))];
                 getCustomTasks('programme').forEach(c => pTs.push({id:c.activityid, d:c.activity, st:c.startdate, du:c.duration, s:c.status}));
-                let pMs = pTs.map(t => { const id = sanitizeKey(t.id); const st=wardData[currentWard][id+'_start']||t.st||""; const dur=wardData[currentWard][id+'_dur']||t.du||""; return { d:t.d, sStat:wardData[currentWard][id+'_status']||t.s||"Not Started", sObj:st?new Date(st):null, eObj:calcEndObj(st,dur) }; }).filter(t=>t.sObj&&t.eObj);
+                let pMs = pTs.map(t => { const id = sanitizeKey(t.id); const st=wardData[currentWard][id+'_start']||t.st||""; const dur=wardData[currentWard][id+'_dur']||t.du||""; return { origId: t.id, d:t.d, sStat:wardData[currentWard][id+'_status']||t.s||"Not Started", sObj:st?new Date(st):null, eObj:calcEndObj(st,dur) }; }).filter(t => !hiddenBase.includes(t.origId) && t.sObj && t.eObj);
                 if(pMs.length>0) {
                     const minD = new Date(Math.min(...pMs.map(t=>t.sObj).filter(x=>x))); const maxD = new Date(Math.max(...pMs.map(t=>t.eObj).filter(x=>x))); const span = (maxD-minD)||(1000*60*60*24);
                     let mAxis = `<div style="position:relative;height:15px;border-bottom:1px solid #cbd5e1;margin-bottom:8px;font-size:0.65rem;color:#64748b;">`;
@@ -575,8 +576,6 @@
             }); 
         }
         
-        // Modal functions exist in code but omitted in comment for brevity; they remain unchanged from the previous exact block other than standard inclusion.
-        // Full modal logic retained below.
         function deleteEq(k) { if(confirm("Delete item?")){ delete wardData[currentWard]['equipmentLog'][k]; if(auth.currentUser)database.ref(`pmoData/${currentWard}/equipmentLog/${k}`).remove(); showModule('equipment'); } }
         function promptNewRoom(){ const r=prompt("New Room Name/Number:"); if(r){ if(!wardData[currentWard]['_customRooms'])wardData[currentWard]['_customRooms']=[]; if(!wardData[currentWard]['_customRooms'].includes(r)){wardData[currentWard]['_customRooms'].push(r); if(auth.currentUser)database.ref(`pmoData/${currentWard}/_customRooms`).set(wardData[currentWard]['_customRooms']);} equipCurrentRoom=r; showModule('equipment'); } }
         function saveDirComment(n,val){ if(!wardData['GLOBAL_DIR_NOTES'])wardData['GLOBAL_DIR_NOTES']={}; wardData['GLOBAL_DIR_NOTES'][n]=val; if(auth.currentUser)database.ref(`pmoData/GLOBAL_DIR_NOTES/${n}`).set(val); }
