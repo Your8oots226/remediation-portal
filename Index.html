@@ -408,6 +408,7 @@
                     body.innerHTML += `<h3>Late Enablers & Moves</h3><div style="margin-bottom:20px;border:1px solid #fca5a5;padding:10px;background:#fee2e2;">${lateE.map(t=>`<div>• ${t.d}</div>`).join('')}</div>`;
                 }
             }
+            setTimeout(() => document.querySelectorAll('textarea').forEach(el => autoResize(el)), 100); switchView('view-content');
         }
 
         function deleteEq(k) { if(confirm("Delete item?")){ delete wardData[currentWard]['equipmentLog'][k]; if(auth.currentUser)database.ref(`pmoData/${currentWard}/equipmentLog/${k}`).remove(); showModule('equipment'); } }
